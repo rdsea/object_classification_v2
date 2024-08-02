@@ -1,0 +1,33 @@
+
+qoa_config:
+  client:
+    user_id: aaltosea2
+    instance_id: ingestion_service_01
+    stage_id: Ingestion
+    method: REST
+    application_name: nii
+    role: ml
+  connector:
+    amqp_connector:
+      class: AMQP
+      conf:
+        end_point: 195.148.22.62
+        exchange_name: nii_inference
+        exchange_type: topic
+        out_routing_key: nii.ingestion
+  registration_url: http://0.0.0.0:5010/registration
+
+external_services:
+  minio_storage:
+    endpoint_url: http://195.148.22.62:9000   #fixed endpoint
+    access_key: admin_user
+    secret_key: admin_pass
+    bucket_name: nii-application-unprocessed-image
+
+  service_registry:
+    consul_config:
+      url: http://195.148.22.62:8500
+    service:
+      image_info:   # dynamic endpoint
+        type: one
+        tags: ['nii_case']

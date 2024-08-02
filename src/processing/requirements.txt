@@ -1,0 +1,4 @@
+@git+https://github.com/rdsea/ROHE
+fastapi^=0.111.1
+uvicorn[standard]^=0.30.3
+opencv-python^=4.10.0.84
