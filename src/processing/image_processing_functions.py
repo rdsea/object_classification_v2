@@ -3,9 +3,8 @@ import numpy as np
 
 
 # because the nature of the object detection task
-# preserving the context and original aspect ratio os the object is the key
-def resize_and_pad(image, target_size=(32, 32, 3)):
-    # Ensure target size is a 3D tuple
+# preserving the context and original aspect ratio of the object is the key
+def resize_and_pad(image, target_size: tuple[int, int, int] = (32, 32, 3)):
     target_height, target_width, dim = target_size
 
     # Compute the scale factor and resize

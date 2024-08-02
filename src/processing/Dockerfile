@@ -8,6 +8,6 @@ RUN apt-get update && \
   pip install --no-cache-dir -r requirements.txt
 COPY . .
 
-EXPOSE 5012
-CMD ["uvicorn", "--host", "0.0.0.0", "--port", "5012", "processing:app"]
+EXPOSE 5010
+CMD ["uvicorn", "--host", "0.0.0.0", "--port", "5010", "processing:app"]
 

@@ -1,16 +1,6 @@
-
 processing:
-  threading:
-    max_thread: 3
-  request:
-    rate_per_second: 1  # Number of requests to image info service per second
-    retry_delay:
-      # strategy: exponential_backoff # Strategy for retry delay increment
-      min: 1s  # Minimum waiting period for retry after a failed request
-      max: 30s # Maximum waiting period for retry
-
   image_processing:
-    target_dim: 32,32,3
+    target_dim: (32,32,3)
     func_name: resize_and_pad
 
 qoa_config:
@@ -56,8 +46,8 @@ external_services:
     # - To use all servers with specific tags: type: all, tags: [tag1, tag2]
     # - To select one random server with specific tags: type: one, tags: [tag1]
     # - To use a majority of servers with specific tags: type: quorum, tags: [tag2]
-    tags: ['nii_case']  # List of tags to filter servers, can be empty.
+    tags: ["nii_case"] # List of tags to filter servers, can be empty.
 
   image_info:
     type: one
-    tags: ['nii_case']
+    tags: ["nii_case"]

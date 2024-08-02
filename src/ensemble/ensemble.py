@@ -6,22 +6,20 @@ import time
 from typing import Annotated
 
 from aiohttp import ClientSession, FormData
-from fastapi import BackgroundTasks, FastAPI, Form, UploadFile
+from fastapi import FastAPI, Form, Request
 from fastapi.responses import JSONResponse
 from rohe.common import rohe_utils
 from rohe.service_registry.consul import ConsulClient
 
 config_lock = asyncio.Lock()  # Lock to control access to the global variable
 
-PORT = 5014
+PORT = 5011
 config_file = "ensemble_service.yaml"
 config = rohe_utils.load_config(file_path=config_file)
 
 assert config is not None
 logging.debug(f"Ensemble Service configuration: {config}")
 
-# consul for service register
-# register service
 local_ip = rohe_utils.get_local_ip()
 consul_client = ConsulClient(
     config["external_services"]["service_registry"]["consul_config"]
@@ -127,28 +125,23 @@ def background_image_processing(task):
 
 
 @app.post("/ensemble_service/")
-async def get_image(
-    image: UploadFile,
-    background_tasks: BackgroundTasks,
-    request_id: Annotated[str, Form()],
-    shape: Annotated[str, Form()],
-    dtype: Annotated[str, Form()],
-):
-    try:
-        logging.info(f"Received request with metadata: {request_id}")
-        logging.info(f"Received request with shape: {shape}")
-        logging.info(f"Received request with dtype: {dtype}")
-        image_bytes = await image.read()
-        logging.info(f"Received image with type: {type(image)}")
-
-        task = process_image_task(image_bytes, request_id, shape, dtype)
-        background_tasks.add_task(background_image_processing, task)
-
-        response = "Success to add image to Ensemble Service"
-        return JSONResponse(content={"response": response}, status_code=200)
-    except Exception as e:
-        logging.exception(f"Error: {e}")
-        return JSONResponse(content={"error": f"Error: {e}"}, status_code=500)
+async def get_image(request: Request):
+    return "OK"
+    # try:
+    #     logging.info(f"Received request with metadata: {request_id}")
+    #     logging.info(f"Received request with shape: {shape}")
+    #     logging.info(f"Received request with dtype: {dtype}")
+    #     image_bytes = await image.read()
+    #     logging.info(f"Received image with type: {type(image)}")
+    #
+    #     task = process_image_task(image_bytes, request_id, shape, dtype)
+    #     background_tasks.add_task(background_image_processing, task)
+    #
+    #     response = "Success to add image to Ensemble Service"
+    #     return JSONResponse(content={"response": response}, status_code=200)
+    # except Exception as e:
+    #     logging.exception(f"Error: {e}")
+    #     return JSONResponse(content={"error": f"Error: {e}"}, status_code=500)
 
 
 @app.post("/change_config/")

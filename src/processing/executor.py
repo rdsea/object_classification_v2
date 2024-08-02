@@ -1,8 +1,6 @@
-import json
 import os
 import time
 from collections.abc import Callable
-from concurrent.futures import ThreadPoolExecutor
 
 import cv2
 import image_processing_functions
@@ -18,11 +16,8 @@ class ProcessingServiceExecutor:
     def __init__(
         self, config: dict, minio_connector: MinioConnector, consul_client: ConsulClient
     ):
-        self.max_thread: int = config["processing"]["threading"]["max_thread"]
-        self.thread_pool = ThreadPoolExecutor(self.max_thread)
         self.config = config
 
-        self.image_info_service_url = None
         self.minio_connector = minio_connector
         self.consul_client = consul_client
 
@@ -40,64 +35,11 @@ class ProcessingServiceExecutor:
         )
 
         self.image_dim = config["processing"]["image_processing"]["target_dim"]
-        self.image_dim = rohe_utils.convert_str_to_tuple(self.image_dim)
 
         # create a temp folder to store temporary image file download from minio server
         self.tmp_folder = "tmp_image_folder"
         if not os.path.exists(self.tmp_folder):
             os.mkdir(self.tmp_folder)
-
-    # running logic
-    def run(self):
-        self.waiting_period = self.min_waiting_period
-        while True:
-            task = self.get_image_from_image_info_service()
-            if task:
-                self.thread_pool.submit(
-                    self._processing, task, self.image_info_service_url
-                )
-                self.waiting_period = self.min_waiting_period
-                time.sleep(1 / self.request_rate)
-            else:
-                # if there is no image to be processed yet
-                # sleep for a period, then continue to seek for task
-                time.sleep(self.waiting_period)
-                self.waiting_period = self.waiting_period * 2
-                self.waiting_period = min(self.max_waiting_period, self.waiting_period)
-
-    # TODO: fix this to use reverse proxy?
-    def get_info_service_url(self) -> str | None:
-        # set flag to check if image info service is available
-        try:
-            # get tags and query type for image info service
-            tags = self.config["external_services"]["image_info"]["tags"]
-            query_type = self.config["external_services"]["image_info"]["type"]
-
-            # try 3 times to get image info service
-            for _ in range(1, 3):
-                image_info_service_list: dict = rohe_utils.handle_service_query(
-                    consul_client=self.consul_client,
-                    service_name="image_info",
-                    query_type=query_type,
-                    tags=tags,
-                )
-                if image_info_service_list:
-                    image_info_service = image_info_service_list[0]
-                    self.image_info_flag = True
-                    # create image info service url
-                    image_info_endpoint = "image_info_service"
-                    image_info_service_url = f"http://{image_info_service['Address']}:{image_info_service['Port']}/{image_info_endpoint}"
-                    logger.debug(
-                        f"Get image info url successfully: {image_info_service_url}"
-                    )
-                    return image_info_service_url
-                time.sleep(1)
-                logger.info("Waiting for image info service to be available")
-            return None
-
-        except Exception as e:
-            logger.error(f"Error: {e}", exc_info=True)
-            return None
 
     def get_ensemble_service_url(self) -> str | None:
         try:
@@ -133,45 +75,7 @@ class ProcessingServiceExecutor:
             logger.error(f"Error: {e}", exc_info=True)
             return None
 
-    def get_image_from_image_info_service(self) -> dict | None:
-        # get image info service url from Consul
-        if not self.image_info_service_url:
-            self.image_info_service_url = self.get_info_service_url()
-        # send request to image info service to get task
-        if not self.image_info_service_url:
-            logger.info("No image info service available")
-            return None
-        response = requests.get(self.image_info_service_url + "/task/")
-        if response.status_code == 200:
-            response_dict = response.json()
-            try:
-                task = response_dict["image_info"]
-            except Exception as e:
-                logger.warning(f"Error when getting task: {e}", exc_info=True)
-                # attempt to double decode to make it to be a dict
-                task = json.loads(response_dict)["image_info"]
-
-                # ingestion_report = task['report']
-                # self.qoaClient.importPReport(reports= ingestion_report)
-
-            return task
-        else:
-            logger.info("No image to be processed yet")
-            return None
-
     def _processing(self, task: dict, image_info_service_url: str):
-        """
-        task is a dictionary contain 6 key, v pairs
-            'request_id':
-            'timestamp':
-            'device_id':
-            'image_url':
-            'dtype': dtype,
-            'shape': shape,
-        }
-        Process the image
-        download image from minio server and save it to a temp folder
-        """
         try:
             temp_local_path = self._download_image_from_minio(
                 image_url=task["image_url"]
@@ -240,19 +144,6 @@ class ProcessingServiceExecutor:
                 logger.exception(f"Error when making request to ensemble service: {e}")
 
             return True
-
-    def _download_image_from_minio(self, image_url: str) -> str | None:
-        logger.info(f"about to download image from minio: {image_url}")
-
-        filename = image_url.split("/")[-1]
-        temp_local_path = os.path.join(self.tmp_folder, filename)
-        logger.info(f"This is temp file name: {temp_local_path}")
-        success = self.minio_connector.download(
-            remote_file_path=image_url, local_file_path=temp_local_path
-        )
-        if success:
-            return temp_local_path
-        return None
 
     def _image_processing(self, task: dict) -> np.ndarray | None:
         try:
