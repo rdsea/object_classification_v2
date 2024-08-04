@@ -6,6 +6,7 @@ service:
   - inference
   - ingestion
   - processing
+  - ensemble
   - vgg_0
   - vgg_2_7
   - vgg_2_1

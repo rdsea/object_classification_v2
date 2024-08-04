@@ -3,30 +3,24 @@ from rohe.common.logger import logger
 
 
 # ---------------------------------------------------------
-def average_probability(data: list) -> dict | None:
+def average_probability(data: list, request_id: str) -> dict | None:
     if len(data) < 2:
         logger.error("No aggregation needed for only one prediction")
         return None
 
-    req_id = data[0]["request_id"]
-
     # To store aggregated predictions, pipeline_ids, and inference_model_ids
     aggregated_predictions = []
-    pipeline_ids = []
-    inference_model_ids = []
 
     for entry in data:
         aggregated_predictions.append(entry["prediction"])
-        pipeline_ids.append(entry["pipeline_id"])
-        inference_model_ids.append(entry["inference_model_id"])
 
     mean_prediction: np.ndarray = np.mean(aggregated_predictions, axis=0)
 
     aggregated_result = {
-        "request_id": req_id,
+        "request_id": request_id,
         "prediction": mean_prediction.tolist(),
-        "pipeline_id": ",".join(pipeline_ids),
-        "inference_model_id": ",".join(inference_model_ids),
+        # "pipeline_id": ",".join(pipeline_ids),
+        # "inference_model_id": ",".join(inference_model_ids),
     }
 
     return aggregated_result

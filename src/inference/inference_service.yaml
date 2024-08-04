@@ -4,7 +4,6 @@ ensemble: true
 
 # Model Information
 model_info:
-  chosen_model_id: vgg_7
   input_shape: 32,32,3
   load_model_params:
     architecture_file: model.json

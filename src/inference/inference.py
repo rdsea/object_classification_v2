@@ -1,15 +1,16 @@
 import logging
+import os
 import signal
 import sys
-from typing import Annotated
 
-from fastapi import FastAPI, Form, UploadFile
+import numpy as np
+from fastapi import FastAPI, Request
 from object_classification_agent import ObjectClassificationAgent
 from rohe.common import rohe_utils
 from rohe.service_registry.consul import ConsulClient
 from rohe.storage.minio import MinioConnector
 
-PORT = 11020
+PORT = int(os.environ["PORT"])
 try:
     config_file = "inference_service.yaml"
     config = rohe_utils.load_config(file_path=config_file)
@@ -23,7 +24,8 @@ local_ip = rohe_utils.get_local_ip()
 consul_client = ConsulClient(
     config=config["external_services"]["service_registry"]["consul_config"]
 )
-chosen_model_id = config["model_info"]["chosen_model_id"]
+# chosen_model_id = config["model_info"]["chosen_model_id"]
+chosen_model_id = os.environ["CHOSEN_MODEL"]
 service_id = consul_client.service_register(
     name=chosen_model_id,
     address=local_ip,
@@ -44,15 +46,11 @@ app = FastAPI()
 
 
 @app.post("/inference/")
-async def inference(
-    image: UploadFile,
-    timestamp: Annotated[str, Form()],
-    device_id: Annotated[str, Form()],
-    image_extension: Annotated[str, Form()],
-    dtype: Annotated[str, Form()],
-    shape: Annotated[str, Form()],
-):
-    pass
+async def inference(request: Request):
+    image_bytes = await request.body()
+    reconstructed_image = np.frombuffer(image_bytes, dtype=np.uint8)
+    reconstructed_image = reconstructed_image.reshape((32, 32, 3))
+    return ml_agent.predict(reconstructed_image)
 
 
 def signal_handler(sig, frame):

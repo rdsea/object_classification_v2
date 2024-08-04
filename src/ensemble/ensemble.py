@@ -1,19 +1,23 @@
 import asyncio
 import logging
+import os
 import signal
 import sys
 import time
 from typing import Annotated
 
-from aiohttp import ClientSession, FormData
-from fastapi import FastAPI, Form, Request
+import aiohttp
+import ensemble_function
+from fastapi import BackgroundTasks, FastAPI, Form, Request
 from fastapi.responses import JSONResponse
 from rohe.common import rohe_utils
 from rohe.service_registry.consul import ConsulClient
 
 config_lock = asyncio.Lock()  # Lock to control access to the global variable
 
-PORT = 5011
+
+PORT = int(os.environ["PORT"])
+
 config_file = "ensemble_service.yaml"
 config = rohe_utils.load_config(file_path=config_file)
 
@@ -25,7 +29,7 @@ consul_client = ConsulClient(
     config["external_services"]["service_registry"]["consul_config"]
 )
 service_id = consul_client.service_register(
-    name="ensemble_service1", address=local_ip, tag=["nii_case"], port=PORT
+    name="ensemble", address=local_ip, tag=["nii_case"], port=PORT
 )
 
 
@@ -34,11 +38,7 @@ app.state.config = config
 
 
 def get_service_url(tags, query_type, service_name, consul_client) -> str | None:
-    # set flag to check if image info service is available
-    service_flag = False
     try:
-        # get tags and query type for image info service
-        # try 3 times to get image info service
         for _ in range(1, 3):
             service_list: dict = rohe_utils.handle_service_query(
                 consul_client=consul_client,
@@ -47,23 +47,15 @@ def get_service_url(tags, query_type, service_name, consul_client) -> str | None
                 tags=tags,
             )
             if service_list:
-                service = service_list[0]
-                service_flag = True
-                break
+                inference_service = service_list[0]
+                return f"http://{inference_service['Address']}:{inference_service['Port']}/inference/"
             time.sleep(1)
             logging.info(f"No {service_name} service found. Retrying...")
 
     except Exception as e:
         logging.error(f"Error: {e}", exc_info=True)
         return None
-    if not service_flag:
-        return None
-
-    # create image info service url
-    service_endpoint = "inference"
-    service_url = f"http://{service['Address']}:{service['Port']}/{service_endpoint}"
-    logging.debug(f"Get image info url successfully: {service_url}")
-    return service_url
+    return None
 
 
 def get_inference_service_url(ensemble: dict):
@@ -77,71 +69,55 @@ def get_inference_service_url(ensemble: dict):
     return list_service_url
 
 
-async def send_post_request(session, url, payload, image_data):
-    data = FormData()
-    data.add_field(
-        "image", image_data, filename="image", content_type="application/octet-stream"
-    )
-    data.add_field("request_id", payload["request_id"])
-    data.add_field("shape", payload["shape"])
-    data.add_field("dtype", payload["dtype"])
-
-    async with session.post(url, data=data) as response:
+async def send_post_request(
+    session: aiohttp.ClientSession, url: str, image_data: bytes
+):
+    async with session.post(url, data=image_data) as response:
         return await response.json()  # Assuming the response is JSON
 
 
-async def process_image_task(
-    image_data: bytes, request_id: str, shape: str, dtype: str
-):
+async def process_image_task(image_data: bytes, request_id: str):
     ensemble = app.state.config["ensemble"]
-    # chosen_ensemble_function = getattr(
-    #     ensemble_function, app.state.config["aggregating_func"]["func_name"]
-    # )
+    chosen_ensemble_function = getattr(
+        ensemble_function,
+        app.state.config["aggregating"]["aggregating_func"]["func_name"],
+    )
     list_service_url = get_inference_service_url(ensemble)
     logging.info(f"List service url: {list_service_url}")
 
-    if len(list_service_url) != 0:
-        payload = {"request_id": request_id, "shape": shape, "dtype": dtype}
-        async with ClientSession() as session:
+    if list_service_url:
+        async with aiohttp.ClientSession(trust_env=True) as session:
             tasks = [
-                asyncio.create_task(
-                    send_post_request(session, url, payload, image_data)
-                )
+                asyncio.create_task(send_post_request(session, url, image_data))
                 for url in list_service_url
             ]
-            # NOTE: asyncio.wait should be use with Task, not coroutine
             done, _ = await asyncio.wait(tasks, return_when=asyncio.ALL_COMPLETED)
 
+            results = []
             for task in done:
-                result = await task
-                logging.info(f"Result: {result}")
+                results.append(await task)
+            print(chosen_ensemble_function(results, request_id))
 
     else:
         raise RuntimeError("No inference service url")
 
 
-def background_image_processing(task):
-    asyncio.run(task)
-
-
 @app.post("/ensemble_service/")
-async def get_image(request: Request):
-    return "OK"
-    # try:
-    #     logging.info(f"Received request with metadata: {request_id}")
-    #     logging.info(f"Received request with shape: {shape}")
-    #     logging.info(f"Received request with dtype: {dtype}")
-    #     image_bytes = await image.read()
-    #     logging.info(f"Received image with type: {type(image)}")
-    #
-    #     task = process_image_task(image_bytes, request_id, shape, dtype)
-    #     background_tasks.add_task(background_image_processing, task)
-    #
-    #     response = "Success to add image to Ensemble Service"
-    #     return JSONResponse(content={"response": response}, status_code=200)
-    # except Exception as e:
-    #     logging.exception(f"Error: {e}")
-    #     return JSONResponse(content={"error": f"Error: {e}"}, status_code=500)
+async def ensemble(
+    request: Request,
+    background_tasks: BackgroundTasks,
+):
+    try:
+        image_bytes = await request.body()
+        request_id = request.query_params["request_id"]
+        # logging.info(image_bytes)
+        background_tasks.add_task(process_image_task, image_bytes, request_id)
+
+        response = "Success to add image to Ensemble Service"
+        return JSONResponse(content={"response": response}, status_code=200)
+    except Exception as e:
+        logging.exception(f"Error: {e}")
+        return JSONResponse(content={"error": f"Error: {e}"}, status_code=500)
 
 
 @app.post("/change_config/")
