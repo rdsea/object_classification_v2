@@ -61,8 +61,6 @@ tf.saved_model.save(model, "./mobilenet/")
 model = tf.keras.applications.MobileNetV2(
     input_shape=None,
     alpha=1.0,
-    depth_multiplier=1,
-    dropout=0.001,
     include_top=True,
     weights="imagenet",
     input_tensor=None,
