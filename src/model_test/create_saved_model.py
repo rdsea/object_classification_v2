@@ -9,7 +9,7 @@ model = tf.keras.applications.DenseNet121(
     classes=1000,
     classifier_activation="softmax",
 )
-tf.saved_model.save(model, "./densenet121/")
+tf.saved_model.save(model, "./model/DenseNet121/")
 
 model = tf.keras.applications.DenseNet201(
     include_top=True,
@@ -20,7 +20,7 @@ model = tf.keras.applications.DenseNet201(
     classes=1000,
     classifier_activation="softmax",
 )
-tf.saved_model.save(model, "./densenet201/")
+tf.saved_model.save(model, "./model/DenseNet201/")
 
 model = tf.keras.applications.InceptionResNetV2(
     include_top=True,
@@ -31,7 +31,7 @@ model = tf.keras.applications.InceptionResNetV2(
     classes=1000,
     classifier_activation="softmax",
 )
-tf.saved_model.save(model, "./inceptionresnet_v2/")
+tf.saved_model.save(model, "./model/InceptionResNet_v2/")
 
 model = tf.keras.applications.InceptionV3(
     include_top=True,
@@ -42,7 +42,7 @@ model = tf.keras.applications.InceptionV3(
     classes=1000,
     classifier_activation="softmax",
 )
-tf.saved_model.save(model, "./inception_v3/")
+tf.saved_model.save(model, "./model/Inception_v3/")
 
 model = tf.keras.applications.MobileNet(
     input_shape=None,
@@ -56,7 +56,7 @@ model = tf.keras.applications.MobileNet(
     classes=1000,
     classifier_activation="softmax",
 )
-tf.saved_model.save(model, "./mobilenet/")
+tf.saved_model.save(model, "./model/MobileNet/")
 
 model = tf.keras.applications.MobileNetV2(
     input_shape=None,
@@ -68,7 +68,7 @@ model = tf.keras.applications.MobileNetV2(
     classes=1000,
     classifier_activation="softmax",
 )
-tf.saved_model.save(model, "./mobilenet_v2/")
+tf.saved_model.save(model, "./model/MobileNet_v2/")
 
 model = tf.keras.applications.NASNetLarge(
     input_shape=None,
@@ -79,7 +79,7 @@ model = tf.keras.applications.NASNetLarge(
     classes=1000,
     classifier_activation="softmax",
 )
-tf.saved_model.save(model, "./NASNetLarge/")
+tf.saved_model.save(model, "./model/NASNetLarge/")
 
 model = tf.keras.applications.NASNetMobile(
     input_shape=None,
@@ -90,7 +90,7 @@ model = tf.keras.applications.NASNetMobile(
     classes=1000,
     classifier_activation="softmax",
 )
-tf.saved_model.save(model, "./NASNetMobile/")
+tf.saved_model.save(model, "./model/NASNetMobile/")
 
 model = tf.keras.applications.ResNet50(
     include_top=True,
@@ -101,7 +101,7 @@ model = tf.keras.applications.ResNet50(
     classes=1000,
     classifier_activation="softmax",
 )
-tf.saved_model.save(model, "./ResNet50/")
+tf.saved_model.save(model, "./model/ResNet50/")
 
 model = tf.keras.applications.ResNet50V2(
     include_top=True,
@@ -112,7 +112,7 @@ model = tf.keras.applications.ResNet50V2(
     classes=1000,
     classifier_activation="softmax",
 )
-tf.saved_model.save(model, "./ResNet50_v2/")
+tf.saved_model.save(model, "./model/ResNet50_v2/")
 
 model = tf.keras.applications.VGG16(
     include_top=True,
@@ -123,7 +123,7 @@ model = tf.keras.applications.VGG16(
     classes=1000,
     classifier_activation="softmax",
 )
-tf.saved_model.save(model, "./VGGG16/")
+tf.saved_model.save(model, "./model/VGGG16/")
 
 model = tf.keras.applications.Xception(
     include_top=True,
@@ -135,4 +135,4 @@ model = tf.keras.applications.Xception(
     classifier_activation="softmax",
 )
 
-tf.saved_model.save(model, "./Xception/")
+tf.saved_model.save(model, "./model/Xception/")
