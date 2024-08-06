@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.applications.resnet50 import (
@@ -14,7 +16,11 @@ x = tf.keras.utils.img_to_array(img)
 x = np.expand_dims(x, axis=0)
 x = preprocess_input(x)
 
-preds = model.predict(x)
-# decode the results into a list of tuples (class, description, probability)
-# (one such list for each sample in the batch)
-print("Predicted:", decode_predictions(preds, top=3)[0])
+avg_time = 0
+for _ in range(10):
+    start_time = time.time()
+    preds = model.predict(x)
+    print("Predicted:", decode_predictions(preds, top=3)[0])
+    avg_time += time.time() - start_time
+
+print(avg_time / 10)

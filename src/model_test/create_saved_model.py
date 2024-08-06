@@ -123,7 +123,7 @@ model = tf.keras.applications.VGG16(
     classes=1000,
     classifier_activation="softmax",
 )
-tf.saved_model.save(model, "./model/VGGG16/")
+tf.saved_model.save(model, "./model/VGG16/")
 
 model = tf.keras.applications.Xception(
     include_top=True,
