@@ -8,7 +8,7 @@ path = "./tflite_model/"
 dir_list = os.listdir(path)
 
 dir_list.sort()
-N = 1000
+N = 100
 for dir in dir_list:
     saved_model_path = path + dir
     interpreter = tflite.Interpreter(model_path=saved_model_path)
@@ -30,4 +30,4 @@ for dir in dir_list:
         output_data = interpreter.get_tensor(output_details[0]["index"])
         avg_time += time.time() - start_time
 
-    print(f"{dir} runtime: {avg_time / N}")
+    print(f"{dir} runtime: {(avg_time / N)*1000}ms")
