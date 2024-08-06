@@ -8,7 +8,7 @@ path = "./tflite_model/"
 dir_list = os.listdir(path)
 
 dir_list.sort()
-N = 100
+N = 10
 for dir in dir_list:
     saved_model_path = path + dir
     interpreter = tflite.Interpreter(model_path=saved_model_path)
