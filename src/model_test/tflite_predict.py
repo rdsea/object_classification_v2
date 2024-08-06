@@ -12,6 +12,7 @@ from load_image import img_to_array, load_img  # noqa: E402
 
 path = "./tflite_model/"
 dir_list = os.listdir(path)
+dir_list.sort()
 
 N = 1
 for dir in dir_list:
