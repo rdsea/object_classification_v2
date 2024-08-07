@@ -1,6 +1,5 @@
 import os
 import sys
-import time
 
 import tflite_runtime.interpreter as tflite
 
@@ -14,7 +13,6 @@ path = "./tflite_model/"
 dir_list = os.listdir(path)
 dir_list.sort()
 
-N = 1
 for dir in dir_list:
     saved_model_path = path + dir
     interpreter = tflite.Interpreter(model_path=saved_model_path)
@@ -31,12 +29,7 @@ for dir in dir_list:
     input_data = img_to_array(image, dtype=input_details[0]["dtype"])
     avg_time = 0
 
-    for _ in range(N):
-        start_time = time.time()
-        interpreter.set_tensor(input_details[0]["index"], input_data)
+    interpreter.set_tensor(input_details[0]["index"], input_data)
 
-        interpreter.invoke()
-        output_data = interpreter.get_tensor(output_details[0]["index"])
-        avg_time += time.time() - start_time
-
-    print(f"{dir} runtime: {avg_time / N}")
+    interpreter.invoke()
+    output_data = interpreter.get_tensor(output_details[0]["index"])
