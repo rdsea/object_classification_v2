@@ -1,13 +1,13 @@
+import csv
 import os
-import sys
+import time
 
 import numpy as np
 import onnxruntime as ort
+from classes import IMAGENET2012_CLASSES
 from PIL import Image
+from preprocessing import preprocess_input
 from tqdm import tqdm
-
-from classes import IMAGENET2012_CLASSES  # noqa: E402
-from preprocessing import preprocess_input  # noqa: E402
 
 MODEL_CONFIG = {
     "DenseNet121": [(1, 224, 224, 3), "torch"],
@@ -32,12 +32,13 @@ MODEL_CONFIG = {
 def load_model(model_path):
     session_options = ort.SessionOptions()
     session = ort.InferenceSession(
-                model_path,
-                providers=["CUDAExecutionProvider"],
-                sess_options=session_options,
-                )
+        model_path,
+        providers=["CUDAExecutionProvider"],
+        sess_options=session_options,
+    )
 
     return session
+
 
 def preprocess_image(image_path, input_shape, input_mode):
     image = Image.open(image_path).convert("RGB")
@@ -51,16 +52,19 @@ def preprocess_image(image_path, input_shape, input_mode):
 
 
 def get_predictions(model, image_array, input_name):
+    start_time = time.time()
     outputs = model.run(None, {input_name: image_array})
-    return outputs[0]
+    return outputs[0], (time.time() - start_time) * 1000
 
 
-def evaluate_model(model, image_dir, input_shape, input_mode: str):
+def evaluate_model(model_name, model, image_dir, input_shape, input_mode: str):
     key_list = list(IMAGENET2012_CLASSES.keys())
-    incorrect = 0
     input_name = model.get_inputs()[0].name
     images_list = os.listdir(image_dir)[:1000]
     images_list.sort()
+
+    data = []
+
     for file in tqdm(images_list):
         if file.endswith(".JPEG"):
             root, _ = os.path.splitext(file)
@@ -68,17 +72,18 @@ def evaluate_model(model, image_dir, input_shape, input_mode: str):
 
             image_path = os.path.join(image_dir, file)
             image_array = preprocess_image(image_path, input_shape, input_mode)
-            output = get_predictions(model, image_array, input_name)
+            output, latency = get_predictions(model, image_array, input_name)
             predicted_class = np.argmax(output, axis=1)[0]
 
             key_at_index = key_list[predicted_class]
-            if key_at_index != synset_id:
-                incorrect += 1
 
-    print(incorrect)
-    # # Calculate accuracy
-    # accuracy = accuracy_score(true_labels, predictions)
-    # return accuracy
+            data.append([file, synset_id, key_at_index, latency])
+
+    csv_file_path = f"{model_name}.csv"
+    with open(csv_file_path, mode="w", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerow(["Filename", "Ground Truth", "Prediction", "Latency (ms)"])
+        writer.writerows(data)
 
 
 model_name = "MobileNet"
@@ -89,4 +94,4 @@ input_mode = MODEL_CONFIG[model_name][1]
 
 model = load_model(model_path)
 
-evaluate_model(model, image_dir, input_shape, input_mode)
+evaluate_model(model_name, model, image_dir, input_shape, input_mode)

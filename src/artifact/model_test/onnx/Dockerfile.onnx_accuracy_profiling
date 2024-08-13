@@ -2,7 +2,7 @@ FROM rdsea/onnx_runtime:cuda_10.2
 
 WORKDIR /accuracy_profiling
 
-RUN pip install -U Pillow tqdm
+RUN pip install --no-cache-dir -U Pillow==10.4.0 tqdm==4.66.5
 
 COPY ./accurary_profiling.py ./accurary_profiling.py
 COPY ./classes.py ./classes.py
