@@ -1,0 +1,8 @@
+FROM rdsea/onnx_runtime:cuda_10.2
+
+WORKDIR /accuracy_profiling
+
+COPY ./accurary_profiling.py ./accurary_profiling.py
+COPY ./onnx_model/MobileNet.onnx ./MobileNet.onnx
+
+CMD ["python3", "accurary_profiling.py"]

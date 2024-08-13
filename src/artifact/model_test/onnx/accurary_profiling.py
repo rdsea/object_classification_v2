@@ -81,8 +81,8 @@ def evaluate_model(model, image_dir, input_shape, input_mode: str):
 
 
 model_name = "MobileNet"
-model_path = f"./onnx_model/{model_name}.onnx"
-image_dir = "../../dataset/imagenet/data/val_images/"
+model_path = f"./{model_name}.onnx"
+image_dir = "./data"
 input_shape = MODEL_CONFIG[model_name][0]
 input_mode = MODEL_CONFIG[model_name][1]
 
