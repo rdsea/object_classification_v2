@@ -80,7 +80,7 @@ def evaluate_model(model_name, model, image_dir, input_shape, input_mode: str):
 
             data.append([file, synset_id, key_at_index, latency])
 
-    csv_file_path = f"{model_name}.csv"
+    csv_file_path = f"./results/{model_name}.csv"
     with open(csv_file_path, mode="w", newline="") as file:
         writer = csv.writer(file)
         writer.writerow(["Filename", "Ground Truth", "Prediction", "Latency (ms)"])
