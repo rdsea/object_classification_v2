@@ -4,7 +4,7 @@ WORKDIR /accuracy_profiling
 
 RUN pip install --no-cache-dir -U Pillow==10.4.0 tqdm==4.66.5
 
-COPY ./accurary_profiling.py ./accurary_profiling.py
+COPY ./accuracy_profiling.py ./accuracy_profiling.py
 COPY ./classes.py ./classes.py
 COPY ./preprocessing.py ./preprocessing.py
 COPY ./onnx_model/ ./
