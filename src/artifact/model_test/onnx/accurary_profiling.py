@@ -1,3 +1,4 @@
+import argparse
 import csv
 import os
 import time
@@ -84,14 +85,20 @@ def evaluate_model(model_name, model, image_dir, input_shape, input_mode: str):
         writer = csv.writer(file)
         writer.writerow(["Filename", "Ground Truth", "Prediction", "Latency (ms)"])
         writer.writerows(data)
+    print(f"Finish profiling {model_name}")
 
 
-model_name = "MobileNet"
-model_path = f"./{model_name}.onnx"
-image_dir = "./data"
-input_shape = MODEL_CONFIG[model_name][0]
-input_mode = MODEL_CONFIG[model_name][1]
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model", help="model name", default="MobileNet")
+    args = parser.parse_args()
 
-model = load_model(model_path)
+    model_name = args.model
+    model_path = f"./{model_name}.onnx"
+    image_dir = "./data"
+    input_shape = MODEL_CONFIG[model_name][0]
+    input_mode = MODEL_CONFIG[model_name][1]
 
-evaluate_model(model_name, model, image_dir, input_shape, input_mode)
+    model = load_model(model_path)
+
+    evaluate_model(model_name, model, image_dir, input_shape, input_mode)
