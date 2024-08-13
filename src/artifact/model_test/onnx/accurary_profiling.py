@@ -6,13 +6,6 @@ import onnxruntime as ort
 from PIL import Image
 from tqdm import tqdm
 
-current_directory = os.path.dirname(os.path.abspath(__file__))
-util_directory = os.path.join(current_directory, "../../..", "util")
-sys.path.append(util_directory)
-
-dataset_directory = os.path.join(current_directory, "../..", "dataset/imagenet")
-sys.path.append(dataset_directory)
-
 from classes import IMAGENET2012_CLASSES  # noqa: E402
 from preprocessing import preprocess_input  # noqa: E402
 
@@ -39,7 +32,7 @@ MODEL_CONFIG = {
 def load_model(model_path):
     session_options = ort.SessionOptions()
     session = ort.InferenceSession(
-                onnx_model_path,
+                model_path,
                 providers=["CUDAExecutionProvider"],
                 sess_options=session_options,
                 )
@@ -57,8 +50,7 @@ def preprocess_image(image_path, input_shape, input_mode):
     return image_array
 
 
-def get_predictions(model, image_array):
-    input_name = model.get_inputs()[0].name
+def get_predictions(model, image_array, input_name):
     outputs = model.run(None, {input_name: image_array})
     return outputs[0]
 
@@ -66,14 +58,17 @@ def get_predictions(model, image_array):
 def evaluate_model(model, image_dir, input_shape, input_mode: str):
     key_list = list(IMAGENET2012_CLASSES.keys())
     incorrect = 0
-    for file in tqdm(os.listdir(image_dir)[:1000]):
+    input_name = model.get_inputs()[0].name
+    images_list = os.listdir(image_dir)[:1000]
+    images_list.sort()
+    for file in tqdm(images_list):
         if file.endswith(".JPEG"):
             root, _ = os.path.splitext(file)
             _, synset_id = os.path.basename(root).rsplit("_", 1)
 
             image_path = os.path.join(image_dir, file)
             image_array = preprocess_image(image_path, input_shape, input_mode)
-            output = get_predictions(model, image_array)
+            output = get_predictions(model, image_array, input_name)
             predicted_class = np.argmax(output, axis=1)[0]
 
             key_at_index = key_list[predicted_class]
