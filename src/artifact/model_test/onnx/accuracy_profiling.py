@@ -94,7 +94,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     model_name = args.model
-    model_path = f"./{model_name}.onnx"
+    model_path = f"./onnx_model/{model_name}.onnx"
     image_dir = "./data"
     input_shape = MODEL_CONFIG[model_name][0]
     input_mode = MODEL_CONFIG[model_name][1]

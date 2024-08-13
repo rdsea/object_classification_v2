@@ -8,5 +8,4 @@ COPY ./accurary_profiling.py ./accurary_profiling.py
 COPY ./classes.py ./classes.py
 COPY ./preprocessing.py ./preprocessing.py
 COPY ./onnx_model/ ./
-
-CMD ["python3", "accurary_profiling.py"]
+COPY ./run_all_accuracy_profiling.sh ./run_all_accuracy_profiling.sh
