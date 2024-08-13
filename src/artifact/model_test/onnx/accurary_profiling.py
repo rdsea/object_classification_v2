@@ -37,8 +37,14 @@ MODEL_CONFIG = {
 
 
 def load_model(model_path):
-    return ort.InferenceSession(model_path)
+    session_options = ort.SessionOptions()
+    session = ort.InferenceSession(
+                onnx_model_path,
+                providers=["CUDAExecutionProvider"],
+                sess_options=session_options,
+                )
 
+    return session
 
 def preprocess_image(image_path, input_shape, input_mode):
     image = Image.open(image_path).convert("RGB")
