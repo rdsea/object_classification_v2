@@ -4,52 +4,74 @@ import signal
 import sys
 
 import numpy as np
+import yaml
+from datamodel import ImageClassificationModelEnum, InferenceServiceConfig
 from fastapi import FastAPI, Request
-from object_classification_agent import ObjectClassificationAgent
-from rohe.common import rohe_utils
-from rohe.service_registry.consul import ConsulClient
-from rohe.storage.minio import MinioConnector
+from image_classification_agent import ImageClassificationAgent
+
+current_directory = os.path.dirname(os.path.abspath(__file__))
+util_directory = os.path.join(current_directory, "..", "util")
+sys.path.append(util_directory)
+
+# TODO: find better way please!!!
+import utils  # noqa: E402
+from consul import ConsulClient  # noqa: E402
 
 PORT = int(os.environ["PORT"])
+
+MODEL_CONFIG = {
+    "DenseNet121": [(1, 224, 224, 3), "torch"],
+    "DenseNet201": [(1, 224, 224, 3), "torch"],
+    "EfficientNetB0": [(1, 224, 224, 3), "raw"],
+    "EfficientNetB7": [(1, 600, 600, 3), "raw"],
+    "EfficientNetV2L": [(1, 480, 480, 3), "raw"],
+    "EfficientNetV2S": [(1, 384, 384, 3), "raw"],
+    "InceptionResNetV2": [(1, 299, 299, 3), "tf"],
+    "InceptionV3": [(1, 299, 299, 3), "tf"],
+    "MobileNet": [(1, 224, 224, 3), "tf"],
+    "MobileNetV2": [(1, 224, 224, 3), "tf"],
+    "NASNetLarge": [(1, 331, 331, 3), "tf"],
+    "NASNetMobile": [(1, 224, 224, 3), "tf"],
+    "ResNet50": [(1, 224, 224, 3), "caffe"],
+    "ResNet50V2": [(1, 224, 224, 3), "tf"],
+    "VGG16": [(1, 224, 224, 3), "caffe"],
+    "Xception": [(1, 299, 299, 3), "tf"],
+}
+
 try:
-    config_file = "inference_service.yaml"
-    config = rohe_utils.load_config(file_path=config_file)
+    with open("./inference_service_config.yaml") as file:
+        yaml_content = yaml.safe_load(file)  # Load YAML content
+        config = InferenceServiceConfig(**yaml_content)  # Parse using Pydantic model
 except Exception as e:
     logging.error(f"Error loading config file: {e}")
     sys.exit(1)
-assert config is not None
-logging.info(f"Ingestion configuration: {config}")
+logging.info(f"Inference configuration: {config}")
 
-local_ip = rohe_utils.get_local_ip()
+local_ip = utils.get_local_ip()
 consul_client = ConsulClient(
-    config=config["external_services"]["service_registry"]["consul_config"]
+    config=config.external_services["service_registry"]["consul_config"]
 )
-# chosen_model_id = config["model_info"]["chosen_model_id"]
-chosen_model_id = os.environ["CHOSEN_MODEL"]
+
+chosen_model = os.environ["CHOSEN_MODEL"]
+chosen_model = ImageClassificationModelEnum[chosen_model]
 service_id = consul_client.service_register(
-    name=chosen_model_id,
+    name=chosen_model.name,
     address=local_ip,
-    tag=["nii_case", "vgg", chosen_model_id],
+    tag=["nii_case", "inference", chosen_model.name],
     port=PORT,
 )
 
-minio_connector = MinioConnector(config["external_services"]["minio_storage"])
-
-
-ml_agent = ObjectClassificationAgent(
-    load_model_params=config["model_info"]["load_model_params"],
-    model_id=chosen_model_id,
-    input_shape=config["model_info"]["input_shape"],
-)
+model_config = config.model_config_dict[chosen_model]
+ml_agent = ImageClassificationAgent(chosen_model, model_config)
 
 app = FastAPI()
 
 
-@app.post("/inference/")
+@app.post("/inference")
 async def inference(request: Request):
     image_bytes = await request.body()
-    reconstructed_image = np.frombuffer(image_bytes, dtype=np.uint8)
-    reconstructed_image = reconstructed_image.reshape((32, 32, 3))
+    image_array = np.frombuffer(image_bytes, dtype=np.float32)
+    reconstructed_image = image_array.reshape((224, 224, 3))
     return ml_agent.predict(reconstructed_image)
 
 

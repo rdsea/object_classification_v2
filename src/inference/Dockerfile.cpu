@@ -1,0 +1,27 @@
+FROM python:3.10.14-slim-bullseye
+
+WORKDIR /object_classification
+
+# Missing package for opencv
+RUN apt-get update
+RUN apt-get install -y ffmpeg libsm6 libxext6
+
+COPY ./inference/onnx_model/ ./inference/onnx_model/
+
+COPY ./inference/run_server.sh ./inference/run_server.sh
+
+COPY ./inference/requirements.txt ./requirements.txt
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY ./inference/*.py ./inference/
+
+COPY ./inference/*.yaml ./inference/
+
+COPY ./util/ ./util
+
+EXPOSE 8010
+
+WORKDIR /object_classification/inference
+
+ENTRYPOINT [ "./run_server.sh" ]

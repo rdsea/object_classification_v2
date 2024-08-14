@@ -1,0 +1,11 @@
+FROM rdsea/onnx_runtime:cuda_10.2
+
+WORKDIR /inference
+
+RUN pip install --no-cache-dir -U Pillow==10.4.0
+
+COPY ./onnx_model/ ./
+
+COPY ./*.[py,yml,txt] ./
+
+CMD ["./run_all_accuracy_profiling.sh"]

@@ -25,7 +25,7 @@ def _preprocess_numpy_input(x, data_format, mode):
         x = x.astype(np.float32, copy=False)
 
     if mode == "tf":
-        x /= 127.5
+        x = x / 127.5
         x -= 1.0
         return x
     elif mode == "torch":

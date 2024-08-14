@@ -7,11 +7,19 @@ service:
   - ingestion
   - processing
   - ensemble
-  - vgg_0
-  - vgg_2_7
-  - vgg_2_1
-  - vgg_3_6
-  - vgg_6
-  - vgg_6_7
-  - vgg_7
-  - vgg_7_6
+  - DenseNet121
+  - DenseNet201
+  - EfficientNetB0
+  - EfficientNetB7
+  - EfficientNetV2L
+  - EfficientNetV2S
+  - InceptionResNetV2
+  - InceptionV3
+  - MobileNet
+  - MobileNetV2
+  - NASNetLarge
+  - NASNetMobile
+  - ResNet50
+  - ResNet50V2
+  - VGG16
+  - Xception
