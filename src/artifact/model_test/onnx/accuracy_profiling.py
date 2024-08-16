@@ -96,8 +96,10 @@ if __name__ == "__main__":
     model_name = args.model
     model_path = f"./{model_name}.onnx"
     image_dir = "./data"
-    input_shape = MODEL_CONFIG[model_name][0]
-    input_mode = MODEL_CONFIG[model_name][1]
+
+    base_model = model_name.split("_")[0]
+    input_shape = MODEL_CONFIG[base_model][0]
+    input_mode = MODEL_CONFIG[base_model][1]
 
     model = load_model(model_path)
 
