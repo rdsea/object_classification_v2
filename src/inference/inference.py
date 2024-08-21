@@ -21,24 +21,24 @@ PORT = int(os.environ["PORT"])
 
 # NOTE: model config in the inference service config
 #
-# MODEL_CONFIG = {
-#     "DenseNet121": [(1, 224, 224, 3), "torch"],
-#     "DenseNet201": [(1, 224, 224, 3), "torch"],
-#     "EfficientNetB0": [(1, 224, 224, 3), "raw"],
-#     "EfficientNetB7": [(1, 600, 600, 3), "raw"],
-#     "EfficientNetV2L": [(1, 480, 480, 3), "raw"],
-#     "EfficientNetV2S": [(1, 384, 384, 3), "raw"],
-#     "InceptionResNetV2": [(1, 299, 299, 3), "tf"],
-#     "InceptionV3": [(1, 299, 299, 3), "tf"],
-#     "MobileNet": [(1, 224, 224, 3), "tf"],
-#     "MobileNetV2": [(1, 224, 224, 3), "tf"],
-#     "NASNetLarge": [(1, 331, 331, 3), "tf"],
-#     "NASNetMobile": [(1, 224, 224, 3), "tf"],
-#     "ResNet50": [(1, 224, 224, 3), "caffe"],
-#     "ResNet50V2": [(1, 224, 224, 3), "tf"],
-#     "VGG16": [(1, 224, 224, 3), "caffe"],
-#     "Xception": [(1, 299, 299, 3), "tf"],
-# }
+MODEL_CONFIG = {
+    "DenseNet121": [(1, 224, 224, 3), "torch"],
+    "DenseNet201": [(1, 224, 224, 3), "torch"],
+    "EfficientNetB0": [(1, 224, 224, 3), "raw"],
+    "EfficientNetB7": [(1, 600, 600, 3), "raw"],
+    "EfficientNetV2L": [(1, 480, 480, 3), "raw"],
+    "EfficientNetV2S": [(1, 384, 384, 3), "raw"],
+    "InceptionResNetV2": [(1, 299, 299, 3), "tf"],
+    "InceptionV3": [(1, 299, 299, 3), "tf"],
+    "MobileNet": [(1, 224, 224, 3), "tf"],
+    "MobileNetV2": [(1, 224, 224, 3), "tf"],
+    "NASNetLarge": [(1, 331, 331, 3), "tf"],
+    "NASNetMobile": [(1, 224, 224, 3), "tf"],
+    "ResNet50": [(1, 224, 224, 3), "caffe"],
+    "ResNet50V2": [(1, 224, 224, 3), "tf"],
+    "VGG16": [(1, 224, 224, 3), "caffe"],
+    "Xception": [(1, 299, 299, 3), "tf"],
+}
 
 try:
     with open("./inference_service_config.yaml") as file:

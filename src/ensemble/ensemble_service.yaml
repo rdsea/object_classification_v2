@@ -37,9 +37,9 @@ external_services:
       url: http://195.148.22.62:8500
 
 ensemble:
-  vgg_7:
+  MobileNet:
     type: one
     tags: ["nii_case"]
-  vgg_6:
+  EfficientNetB0:
     type: one
     tags: ["nii_case"]

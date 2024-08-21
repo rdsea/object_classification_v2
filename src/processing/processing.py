@@ -93,32 +93,6 @@ def get_ensemble_service_url() -> str | None:
 app = FastAPI()
 
 
-# @app.post("/change_ensemble/")
-# async def change_ensemble(ensemble_name: str = Form("ensemble_name")):
-#     try:
-#         async with config_lock:
-#             executor.config["external_services"]["inference_service"][
-#                 "ensemble_name"
-#             ] = ensemble_name
-#             response = f"Change ensemble to: {ensemble_name} successfully"
-#             return JSONResponse(content={"response": response}, status_code=200)
-#     except Exception as e:
-#         logging.error(f"Error: {e}", exc_info=True)
-#         return JSONResponse(content={"error": f"Error: {e}"}, status_code=500)
-#
-#
-# @app.post("/change_config/")
-# async def change_requirement(configuration: Annotated[dict, Form()]):
-#     try:
-#         async with config_lock:
-#             executor.config = configuration
-#             response = f"Change ensemble to: {configuration} successfully"
-#             return JSONResponse(content={"response": response}, status_code=200)
-#     except Exception as e:
-#         logging.error(f"Error: {e}", exc_info=True)
-#         return JSONResponse(content={"error": f"Error: {e}"}, status_code=500)
-#
-#
 @app.get("/test/")
 async def get_test():
     """
@@ -142,7 +116,7 @@ def validate_image_type(content_type: str | None):
         )
 
 
-@app.post("/processing/")
+@app.post("/processing")
 async def processing_image(file: UploadFile):
     validate_image_type(file.content_type)
 
@@ -154,7 +128,7 @@ async def processing_image(file: UploadFile):
     shape = image.shape
 
     logging.info(shape)
-    if shape != (32, 32, 3):
+    if shape != (224, 224, 3):
         processed_image = resize_and_pad(image)
     else:
         processed_image = image
