@@ -20,7 +20,7 @@ COPY ./inference/*.yaml ./inference/
 
 COPY ./util/ ./util
 
-EXPOSE 8010
+EXPOSE 8050-8065
 
 WORKDIR /object_classification/inference
 
