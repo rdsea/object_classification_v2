@@ -57,7 +57,7 @@ if __name__ == "__main__":
         "--url",
         type=str,
         help="request url",
-        default="http://localhost:8010/inference",
+        default="http://localhost:8058/inference",
     )
 
     # Parse the parameters

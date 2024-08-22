@@ -16,4 +16,4 @@
 # ResNet50V2 8063
 # VGG16 8064
 # Xception 8065
-docker run -p 8051:8051 rdsea/onnx_inference:cpu --model DenseNet121
+docker run -p 8058:8058 rdsea/onnx_inference:cpu --model EfficientNetB0
