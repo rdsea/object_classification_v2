@@ -12,7 +12,7 @@ pip install -r /artifact/model_test/onnx/create_onnx_requirements.txt
 
 ```bash
 cd artifact/model_test/onnx
-mkdir /onnx_model
+mkdir onnx_model
 python3 create_onnx_model.py
 ```
 
