@@ -6,6 +6,7 @@ PORT=0
 CHOSEN_MODEL="MobileNet"
 
 # Model to port mapping
+#TODO: change to random port in range
 declare -A MODEL_PORTS=(
   ["DenseNet121"]=8050
   ["DenseNet201"]=8051
