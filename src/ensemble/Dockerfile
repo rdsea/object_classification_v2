@@ -11,3 +11,5 @@ COPY . .
 EXPOSE 5011
 CMD ["uvicorn", "--host", "0.0.0.0", "--port", "5011", "ensemble:app"]
 
+ENTRYPOINT [ "./run_server.sh" ]
+
