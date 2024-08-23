@@ -10,7 +10,7 @@ COPY ./inference/onnx_model/ ./inference/onnx_model/
 
 COPY ./inference/run_server.sh ./inference/run_server.sh
 
-COPY ./inference/requirements.txt ./requirements.txt
+COPY ./inference/requirements_cuda.txt ./requirements.txt
 
 RUN pip install --no-cache-dir -r requirements.txt
 
