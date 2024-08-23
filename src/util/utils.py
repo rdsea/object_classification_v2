@@ -1,5 +1,6 @@
 import json
 import socket
+from typing import Union
 
 import yaml
 
@@ -18,7 +19,7 @@ def get_local_ip():
         return "Unable to get IP: " + str(e)
 
 
-def load_config(file_path: str) -> dict | None:
+def load_config(file_path: str) -> Union[dict, None]:
     """
     file_path: file path to load config
     """

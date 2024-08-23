@@ -1,9 +1,11 @@
+from typing import Union
+
 import numpy as np
 from rohe.common.logger import logger
 
 
 # ---------------------------------------------------------
-def average_probability(data: list, request_id: str) -> dict | None:
+def average_probability(data: list, request_id: str) -> Union[dict, None]:
     if len(data) < 2:
         logger.error("No aggregation needed for only one prediction")
         return None
@@ -26,7 +28,7 @@ def average_probability(data: list, request_id: str) -> dict | None:
     return aggregated_result
 
 
-def weighted_average_probability(data: list, weights: list) -> dict | None:
+def weighted_average_probability(data: list, weights: list) -> Union[dict, None]:
     if len(data) < 2:
         logger.error("No aggregation needed for only one prediction")
         return None
@@ -60,7 +62,7 @@ def weighted_average_probability(data: list, weights: list) -> dict | None:
     return aggregated_result
 
 
-def rank_averaging(data: list) -> dict | None:
+def rank_averaging(data: list) -> Union[dict, None]:
     if len(data) < 2:
         logger.error("No aggregation needed for only one prediction")
         return None
@@ -101,7 +103,7 @@ def rank_averaging(data: list) -> dict | None:
 # ---------------------------------------------------------
 
 
-def majority_voting(data: list) -> dict | None:
+def majority_voting(data: list) -> Union[dict, None]:
     if len(data) < 2:
         logger.error("No aggregation needed for only one prediction")
         return None
@@ -134,7 +136,7 @@ def majority_voting(data: list) -> dict | None:
 
 
 # more functions
-def median_averaging(data: list) -> dict | None:
+def median_averaging(data: list) -> Union[dict, None]:
     if len(data) < 2:
         logger.error("No aggregation needed for only one prediction")
         return None

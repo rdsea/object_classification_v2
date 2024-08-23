@@ -4,6 +4,7 @@ import os
 import signal
 import sys
 import time
+from typing import Union
 from uuid import uuid4
 
 import aiohttp
@@ -59,7 +60,7 @@ accepted_file_types = [
 ]
 
 
-def get_ensemble_service_url() -> str | None:
+def get_ensemble_service_url() -> Union[str, None]:
     try:
         # get tags and query type for image info service
         tags = config["external_services"]["inference_service"]["tags"]
@@ -102,7 +103,7 @@ async def get_test():
     return JSONResponse(content={"response": response}, status_code=200)
 
 
-def validate_image_type(content_type: str | None):
+def validate_image_type(content_type: Union[str, None]):
     if content_type is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

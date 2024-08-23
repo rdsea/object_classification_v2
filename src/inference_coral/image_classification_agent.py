@@ -1,5 +1,6 @@
 import os
 import sys
+from typing import Union
 
 import cv2
 import numpy as np
@@ -25,7 +26,7 @@ class ImageClassificationAgent:
         self,
         chosen_model: ImageClassificationModelEnum,
         model_config: ModelConfig,
-        execution_provider: str | None = None,
+        execution_provider: Union[str, None] = None,
     ):
         session_options = ort.SessionOptions()
         providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]

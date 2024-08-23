@@ -2,6 +2,7 @@ import json
 import logging
 import random
 import uuid
+from typing import Union
 
 import requests
 
@@ -32,9 +33,9 @@ class ConsulClient:
         self,
         name: str,
         id: str = "",
-        tag: list | None = None,
+        tag: Union[list, None] = None,
         address: str = "",
-        metadata: dict | None = None,
+        metadata: Union[dict, None] = None,
         port: int = 0,
         kind: str = "",
         check=None,
@@ -77,7 +78,7 @@ class ConsulClient:
             logging.error(f"Unable to register for service {id}")
             return False
 
-    def query_service(self, name: str, tags: list[str] | None = None):
+    def query_service(self, name: str, tags: Union[list[str], None] = None):
         service_url = self.url + "/v1/catalog/service/" + name
         params = {}
         if tags:
@@ -106,7 +107,7 @@ class ConsulClient:
             )
             return []
 
-    def get_all_service_instances(self, name: str, tags: list[str] | None = None):
+    def get_all_service_instances(self, name: str, tags: Union[list[str], None] = None):
         """
         Get all service instances based on name and tags.
         """
@@ -114,7 +115,7 @@ class ConsulClient:
         return services
 
     def get_n_random_service_instances(
-        self, name: str, tags: list | None = None, n: int = 3
+        self, name: str, tags: Union[list, None] = None, n: int = 3
     ):
         """
         Get N random service instances based on name and tags.
@@ -124,7 +125,7 @@ class ConsulClient:
             return services
         return random.sample(services, n)
 
-    def get_quorum_service_instances(self, name: str, tags: list | None = None):
+    def get_quorum_service_instances(self, name: str, tags: Union[list, None] = None):
         """
         Get a quorum (majority) of service instances, randomly selected, based on name and tags.
         """

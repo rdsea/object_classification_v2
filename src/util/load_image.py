@@ -4,6 +4,7 @@ Taken from https://github.com/keras-team/keras/blob/v3.3.3/keras/src/utils/image
 
 import io
 import pathlib
+from typing import Union
 
 import numpy as np
 from PIL import Image
@@ -20,7 +21,7 @@ PIL_INTERPOLATION_METHODS = {
 
 
 def load_img(
-    path,
+    path: Union[pathlib.Path, bytes, str, io.BytesIO],
     color_mode="rgb",
     target_size=None,
     interpolation="nearest",
@@ -28,7 +29,7 @@ def load_img(
 ):
     if isinstance(path, io.BytesIO):
         img = Image.open(path)
-    elif isinstance(path, pathlib.Path | bytes | str):
+    elif isinstance(path, Union[pathlib.Path, bytes, str]):
         if isinstance(path, pathlib.Path):
             path = str(path.resolve())
         if isinstance(path, bytes):
