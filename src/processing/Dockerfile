@@ -9,5 +9,6 @@ RUN apt-get update && \
 COPY . .
 
 EXPOSE 5010
-CMD ["uvicorn", "--host", "0.0.0.0", "--port", "5010", "processing:app"]
+
+ENTRYPOINT [ "./run_server.sh" ]
 
