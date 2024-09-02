@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import os
 import signal
@@ -15,27 +14,35 @@ from fastapi.responses import JSONResponse
 from image_processing_functions import (
     resize_and_pad,
 )
-from rohe.common import rohe_utils
-from rohe.service_registry.consul import ConsulClient
-from rohe.storage.minio import MinioConnector
 
-config_lock = asyncio.Lock()  # Lock to control access to the global variable
+# from rohe.common import rohe_utils
+
+# from rohe.storage.minio import MinioConnector
+
+current_directory = os.path.dirname(os.path.abspath(__file__))
+util_directory = os.path.join(current_directory, "..", "util")
+sys.path.append(util_directory)
+
+import utils
+from consul import ConsulClient  # noqa: E402
+
+# config_lock = asyncio.Lock()  # Lock to control access to the global variable
 
 PORT = int(os.environ["PORT"])
 
 try:
     port = PORT
     config_file = "processing_config.yaml"
-    config = rohe_utils.load_config(file_path=config_file)
+    config = utils.load_config(file_path=config_file)
 except Exception as e:
     logging.error(f"Error loading config file: {e}")
     sys.exit(1)
 assert config is not None
 logging.info(f"Image Processing configuration: {config}")
 
-minio_connector = MinioConnector(config["external_services"]["minio_storage"])
+# minio_connector = MinioConnector(config["external_services"]["minio_storage"])
 
-local_ip = rohe_utils.get_local_ip()
+local_ip = utils.get_local_ip()
 consul_client = ConsulClient(
     config=config["external_services"]["service_registry"]["consul_config"]
 )
@@ -71,7 +78,7 @@ def get_ensemble_service_url() -> Union[str, None]:
 
         # try 3 times to get image info service
         for _ in range(1, 3):
-            ensemble_service_list: dict = rohe_utils.handle_service_query(
+            ensemble_service_list: dict = utils.handle_service_query(
                 consul_client=consul_client,
                 service_name=ensemble_name,
                 query_type=query_type,

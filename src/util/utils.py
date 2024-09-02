@@ -3,6 +3,8 @@ import socket
 from typing import Union
 
 import yaml
+from consul import ConsulClient
+from qoa4ml.utils.logger import qoa_logger
 
 
 def get_local_ip():
@@ -34,3 +36,23 @@ def load_config(file_path: str) -> Union[dict, None]:
             return None
     except yaml.YAMLError as exc:
         print(exc)
+
+
+def handle_service_query(
+    consul_client: ConsulClient, service_name, query_type, tags: list[str] | None = None
+):
+    try:
+        if query_type == "all":
+            return consul_client.get_all_service_instances(service_name, tags)
+
+        if query_type == "one":
+            return consul_client.get_n_random_service_instances(service_name, tags, n=1)
+
+        if query_type == "quorum":
+            return consul_client.get_quorum_service_instances(service_name, tags)
+
+        qoa_logger.error(f"Invalid query type: {query_type}")
+        return None
+    except Exception as e:
+        qoa_logger.error(f"Error in handle_service_query: {e}")
+        return None
