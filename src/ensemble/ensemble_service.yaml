@@ -40,6 +40,6 @@ ensemble:
   MobileNet:
     type: one
     tags: ["nii_case"]
-  # EfficientNetB0:
-  #   type: one
-  #   tags: ["nii_case"]
+  EfficientNetB0:
+    type: one
+    tags: ["nii_case"]

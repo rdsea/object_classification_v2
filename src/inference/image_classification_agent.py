@@ -56,6 +56,7 @@ class ImageClassificationAgent:
                 image_array, image_array.shape[1] > self.model_config.input_shape[1]
             )
 
+        print(self.model_config.input_mode)
         image_array = preprocess_input(image_array, mode=self.model_config.input_mode)
 
         if len(image_array.shape) != 4:
