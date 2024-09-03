@@ -36,9 +36,8 @@ def send_request(url, requesting_interval, jpeg_images_list):
         img_data = img_file.read()
 
     start_time = time.time()
-    response = requests.post(
-        url, files={"file": img_data}, headers={"Content-Type": "image/jpeg"}
-    )
+    file = {"file": ("random_image", img_data, "image/jpeg")}
+    response = requests.post(url, files=file)
     print(response.json(), synset_id, (time.time() - start_time) * 1000)
 
 
@@ -53,7 +52,7 @@ if __name__ == "__main__":
         default="../artifact/dataset/imagenet/data/val_images/",
     )
     parser.add_argument(
-        "--rate", type=int, help="number of requests per second", default=15
+        "--rate", type=int, help="number of requests per second", default=1
     )
     parser.add_argument(
         "--device_id", type=str, help="specify device id", default="aaltosea_cam_01"

@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 import json
 import socket
-from typing import Union
 
 import yaml
 from consul import ConsulClient
@@ -21,7 +22,7 @@ def get_local_ip():
         return "Unable to get IP: " + str(e)
 
 
-def load_config(file_path: str) -> Union[dict, None]:
+def load_config(file_path: str) -> dict | None:
     """
     file_path: file path to load config
     """

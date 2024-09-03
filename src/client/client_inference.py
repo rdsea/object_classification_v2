@@ -48,7 +48,7 @@ if __name__ == "__main__":
         default="../artifact/dataset/imagenet/data/val_images/",
     )
     parser.add_argument(
-        "--rate", type=int, help="number of requests per second", default=15
+        "--rate", type=int, help="number of requests per second", default=1
     )
     parser.add_argument(
         "--device_id", type=str, help="specify device id", default="aaltosea_cam_01"

@@ -32,7 +32,7 @@ PORT = int(os.environ["PORT"])
 
 try:
     port = PORT
-    config_file = "processing_config.yaml"
+    config_file = "preprocessing_config.yaml"
     config = utils.load_config(file_path=config_file)
 except Exception as e:
     logging.error(f"Error loading config file: {e}")
