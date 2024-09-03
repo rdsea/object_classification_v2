@@ -12,4 +12,4 @@ fi
 cd ..
 
 echo ""
-sudo docker build --platform linux/arm64 -t rdsea/onnx_inference:"$TAG" -f ./inference/Dockerfile."$TAG" .
+docker build -t rdsea/onnx_inference:"$TAG" -f ./inference/Dockerfile."$TAG" .

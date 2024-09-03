@@ -1,13 +1,13 @@
 from typing import Union
 
 import numpy as np
-from rohe.common.logger import logger
+from qoa4ml.utils.logger import qoa_logger
 
 
 # ---------------------------------------------------------
 def average_probability(data: list, request_id: str) -> Union[dict, None]:
     if len(data) < 2:
-        logger.error("No aggregation needed for only one prediction")
+        qoa_logger.error("No aggregation needed for only one prediction")
         return None
 
     # To store aggregated predictions, pipeline_ids, and inference_model_ids
@@ -30,10 +30,10 @@ def average_probability(data: list, request_id: str) -> Union[dict, None]:
 
 def weighted_average_probability(data: list, weights: list) -> Union[dict, None]:
     if len(data) < 2:
-        logger.error("No aggregation needed for only one prediction")
+        qoa_logger.error("No aggregation needed for only one prediction")
         return None
     if len(data) != len(weights):
-        logger.error(
+        qoa_logger.error(
             f"Data and weights need to have the same size:\ndata:{len(data)}\nweights:{len(weights)}"
         )
         return None
@@ -64,7 +64,7 @@ def weighted_average_probability(data: list, weights: list) -> Union[dict, None]
 
 def rank_averaging(data: list) -> Union[dict, None]:
     if len(data) < 2:
-        logger.error("No aggregation needed for only one prediction")
+        qoa_logger.error("No aggregation needed for only one prediction")
         return None
 
     req_id = data[0]["request_id"]
@@ -105,7 +105,7 @@ def rank_averaging(data: list) -> Union[dict, None]:
 
 def majority_voting(data: list) -> Union[dict, None]:
     if len(data) < 2:
-        logger.error("No aggregation needed for only one prediction")
+        qoa_logger.error("No aggregation needed for only one prediction")
         return None
 
     req_id = data[0]["request_id"]
@@ -138,7 +138,7 @@ def majority_voting(data: list) -> Union[dict, None]:
 # more functions
 def median_averaging(data: list) -> Union[dict, None]:
     if len(data) < 2:
-        logger.error("No aggregation needed for only one prediction")
+        qoa_logger.error("No aggregation needed for only one prediction")
         return None
 
     req_id = data[0]["request_id"]

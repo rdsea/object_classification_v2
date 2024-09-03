@@ -1,4 +1,4 @@
-FROM python:3.10.14-slim-bullseye
+FROM debian:stable-slim
 
 WORKDIR /image_preprocessing/preprocessing
 

@@ -72,7 +72,7 @@ app = FastAPI()
 @app.post("/inference")
 async def inference(request: Request):
     image_bytes = await request.body()
-    image_array = np.frombuffer(image_bytes, dtype=np.float32)
+    image_array = np.frombuffer(image_bytes, dtype=np.uint8)
     # NOTE: Here we assume that the processing service has reshape the input image to size 224,224,3
     reconstructed_image = image_array.reshape((224, 224, 3))
     return ml_agent.predict(reconstructed_image)

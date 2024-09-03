@@ -5,7 +5,7 @@ from cv2.typing import MatLike
 
 # because the nature of the object detection task
 # preserving the context and original aspect ratio of the object is the key
-def resize_and_pad(image: MatLike, target_size: tuple[int, int, int] = (32, 32, 3)):
+def resize_and_pad(image: MatLike, target_size: tuple[int, int, int] = (224, 224, 3)):
     target_height, target_width, dim = target_size
 
     # Compute the scale factor and resize

@@ -1,14 +1,13 @@
 [project]
 dependencies = [
   "fastapi[standard]>=0.111.1",
-  "aiohttp>=3.9.5",
   "uvicorn[standard]>=0.30.3",
-  "opencv-python>=4.10.0.84",
-  "requests",
+  "aiohttp>=3.9.5",
   "qoa4ml",
   "python-multipart",
 ]
-name = "preprocessing"
+
+name = "ensemble"
 version = "0.1.0"
 requires-python = "== 3.9.19"
 

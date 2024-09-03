@@ -1,14 +1,27 @@
-FROM python:3.10.14-slim-bullseye
+FROM debian:stable-slim
 
 WORKDIR /ensemble
-COPY ./requirements.txt .
 
-RUN apt-get update && \
-  apt-get install -y wget vim gcc python3-dev &&\
-  pip install --no-cache-dir -r requirements.txt
-COPY . .
+
+COPY --from=ghcr.io/astral-sh/uv:0.4.3 /uv /bin/uv
+
+COPY ./ensemble/*.toml ./
+
+
+COPY ./ensemble/run_server.sh ./ensemble/run_server.sh
+
+RUN uv sync --compile-bytecode --no-cache
+
+COPY ./ensemble/*.py ./ensemble/
+
+COPY ./ensemble/*.yaml ./ensemble/
+
+COPY ./util/ ./util
 
 EXPOSE 5011
 
-ENTRYPOINT [ "./run_server.sh" ]
+WORKDIR /ensemble/ensemble
 
+ENV PATH="/ensemble/.venv/bin:$PATH"
+
+ENTRYPOINT [ "./run_server.sh" ]

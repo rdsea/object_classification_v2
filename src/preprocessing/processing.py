@@ -23,7 +23,7 @@ current_directory = os.path.dirname(os.path.abspath(__file__))
 util_directory = os.path.join(current_directory, "..", "util")
 sys.path.append(util_directory)
 
-import utils
+import utils  # noqa: E402
 from consul import ConsulClient  # noqa: E402
 
 # config_lock = asyncio.Lock()  # Lock to control access to the global variable
@@ -86,8 +86,7 @@ def get_ensemble_service_url() -> Union[str, None]:
             )
             if ensemble_service_list:
                 ensemble_service = ensemble_service_list[0]
-                ensemble_endpoint = "ensemble_service"
-                ensemble_service_url = f"http://{ensemble_service['Address']}:{ensemble_service['Port']}/{ensemble_endpoint}"
+                ensemble_service_url = f"http://{ensemble_service['Address']}:{ensemble_service['Port']}/ensemble_service/"
                 logging.debug(f"Get ensemble url successfully: {ensemble_service_url}")
                 return ensemble_service_url
             time.sleep(1)

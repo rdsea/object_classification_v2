@@ -29,14 +29,13 @@ def load_img(
 ):
     if isinstance(path, io.BytesIO):
         img = Image.open(path)
-    elif isinstance(path, Union[pathlib.Path, bytes, str]):
-        if isinstance(path, pathlib.Path):
-            path = str(path.resolve())
-        if isinstance(path, bytes):
-            img = Image.open(io.BytesIO(path))
-        else:
-            with open(path, "rb") as f:
-                img = Image.open(io.BytesIO(f.read()))
+    elif isinstance(path, pathlib.Path):
+        path = str(path.resolve())
+    if isinstance(path, bytes):
+        img = Image.open(io.BytesIO(path))
+    elif isinstance(path, str):
+        with open(path, "rb") as f:
+            img = Image.open(io.BytesIO(f.read()))
     else:
         raise TypeError(f"path should be path-like or io.BytesIO, not {type(path)}")
 

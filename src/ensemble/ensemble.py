@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 import os
@@ -10,8 +12,14 @@ import aiohttp
 import ensemble_function
 from fastapi import BackgroundTasks, FastAPI, Form, Request
 from fastapi.responses import JSONResponse
-from rohe.common import rohe_utils
-from rohe.service_registry.consul import ConsulClient
+
+current_directory = os.path.dirname(os.path.abspath(__file__))
+util_directory = os.path.join(current_directory, "..", "util")
+sys.path.append(util_directory)
+
+# TODO: find better way please!!!
+import utils  # noqa: E402
+from consul import ConsulClient  # noqa: E402
 
 config_lock = asyncio.Lock()  # Lock to control access to the global variable
 
@@ -19,12 +27,12 @@ config_lock = asyncio.Lock()  # Lock to control access to the global variable
 PORT = int(os.environ["PORT"])
 
 config_file = "ensemble_service.yaml"
-config = rohe_utils.load_config(file_path=config_file)
+config = utils.load_config(file_path=config_file)
 
 assert config is not None
 logging.debug(f"Ensemble Service configuration: {config}")
 
-local_ip = rohe_utils.get_local_ip()
+local_ip = utils.get_local_ip()
 consul_client = ConsulClient(
     config["external_services"]["service_registry"]["consul_config"]
 )
@@ -40,7 +48,7 @@ app.state.config = config
 def get_service_url(tags, query_type, service_name, consul_client) -> str | None:
     try:
         for _ in range(1, 3):
-            service_list: dict = rohe_utils.handle_service_query(
+            service_list: dict = utils.handle_service_query(
                 consul_client=consul_client,
                 service_name=service_name,
                 query_type=query_type,
@@ -48,7 +56,7 @@ def get_service_url(tags, query_type, service_name, consul_client) -> str | None
             )
             if service_list:
                 inference_service = service_list[0]
-                return f"http://{inference_service['Address']}:{inference_service['Port']}/inference/"
+                return f"http://{inference_service['Address']}:{inference_service['Port']}/inference"
             time.sleep(1)
             logging.info(f"No {service_name} service found. Retrying...")
 

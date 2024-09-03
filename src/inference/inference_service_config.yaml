@@ -86,4 +86,4 @@ external_services:
 
   service_registry:
     consul_config:
-      url: http://195.148.22.62:8500
+      url: http://localhost:8500

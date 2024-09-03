@@ -1,14 +1,16 @@
 [project]
 dependencies = [
   "fastapi[standard]>=0.111.1",
-  "aiohttp>=3.9.5",
   "uvicorn[standard]>=0.30.3",
-  "opencv-python>=4.10.0.84",
-  "requests",
+  "Pillow==10.4.0",
+  "opencv-python==4.10.0.84",
+  "requests==2.32.3",
   "qoa4ml",
-  "python-multipart",
 ]
-name = "preprocessing"
+
+optional-dependencies.cpu = ["onnxruntime==1.18.1"]
+
+name = "inference"
 version = "0.1.0"
 requires-python = "== 3.9.19"
 
