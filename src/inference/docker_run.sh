@@ -16,4 +16,6 @@
 # ResNet50V2 8063
 # VGG16 8064
 # Xception 8065
-docker run -p 8058:8058 rdsea/onnx_inference:cpu --model EfficientNetB0
+
+echo "Running cpu version"
+docker run -p 8058:8058 --net host rdsea/onnx_inference:cpu --model EfficientNetB0
