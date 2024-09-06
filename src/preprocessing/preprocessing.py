@@ -3,6 +3,7 @@ import os
 import signal
 import sys
 import time
+from functools import cache
 from typing import Union
 from uuid import uuid4
 
@@ -14,7 +15,37 @@ from fastapi.responses import JSONResponse
 from image_processing_functions import (
     resize_and_pad,
 )
+from opentelemetry import baggage, metrics, trace
+from opentelemetry.baggage.propagation import W3CBaggagePropagator
+from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 
+# from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+from opentelemetry.sdk.resources import SERVICE_NAME, Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
+from qoa4ml.qoa_client import QoaClient
+
+# Service name is required for most backends
+resource = Resource(attributes={SERVICE_NAME: "preprocessing"})
+
+traceProvider = TracerProvider(resource=resource)
+processor = BatchSpanProcessor(
+    OTLPSpanExporter(endpoint="http://localhost:4318/v1/traces")
+)
+traceProvider.add_span_processor(processor)
+trace.set_tracer_provider(traceProvider)
+
+
+tracer = trace.get_tracer(__name__)
+reader = PeriodicExportingMetricReader(
+    OTLPMetricExporter(endpoint="http://localhost:4318/v1/metrics")
+)
+meterProvider = MeterProvider(resource=resource, metric_readers=[reader])
+metrics.set_meter_provider(meterProvider)
 # from rohe.common import rohe_utils
 
 # from rohe.storage.minio import MinioConnector
@@ -38,7 +69,7 @@ except Exception as e:
     logging.error(f"Error loading config file: {e}")
     sys.exit(1)
 assert config is not None
-logging.info(f"Image Processing configuration: {config}")
+# logging.info(f"Image Processing configuration: {config}")
 
 # minio_connector = MinioConnector(config["external_services"]["minio_storage"])
 
@@ -47,8 +78,10 @@ consul_client = ConsulClient(
     config=config["external_services"]["service_registry"]["consul_config"]
 )
 service_id = consul_client.service_register(
-    name="processing", address=local_ip, tag=["nii_case"], port=port
+    name="preprocessing", address=local_ip, tag=["nii_case"], port=port
 )
+qoa_client = QoaClient(config_dict=config["qoa_config"])
+qoa_client.start_all_probes()
 
 
 accepted_file_types = [
@@ -67,6 +100,7 @@ accepted_file_types = [
 ]
 
 
+@cache
 def get_ensemble_service_url() -> Union[str, None]:
     try:
         # get tags and query type for image info service
@@ -123,46 +157,53 @@ def validate_image_type(content_type: Union[str, None]):
         )
 
 
-@app.post("/processing")
+@app.post("/preprocessing")
 async def processing_image(file: UploadFile):
     validate_image_type(file.content_type)
 
     contents = await file.read()
     np_array = np.frombuffer(contents, np.uint8)
     image = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
-    # NOTE: I don't know why we do this
+    # NOTE: cv2 and Pillow has different color channel layout
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     shape = image.shape
 
-    logging.info(shape)
     if shape != (224, 224, 3):
         processed_image = resize_and_pad(image)
     else:
         processed_image = image
 
-    # os.makedirs(save_directory, exist_ok=True)
-    # save_path = os.path.join(save_directory, file.filename)
-    # cv2.imwrite(save_path, processed_image)
-    # logging.info(f"Image saved to {save_path}")
+    start_time = time.time()
     ensemble_service_url = get_ensemble_service_url()
+    logging.info(f"{(time.time() - start_time)*1000}")
     if ensemble_service_url is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Can't find ensemble service url",
         )
     image_bytes = processed_image.tobytes()
+    request_id = str(uuid4())
+    with tracer.start_as_current_span("test") as _:
+        ctx = baggage.set_baggage("request_id", request_id)
 
-    async with aiohttp.ClientSession() as session:
-        logging.info(ensemble_service_url)
-        async with session.post(
-            ensemble_service_url, data=image_bytes, params={"request_id": str(uuid4())}
-        ) as response:
-            if response.status != 200:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=f"Failed to send image to ensemble service. Status code: {response.status}",
-                )
-            _ = await response.json()
+        headers = {}
+        W3CBaggagePropagator().inject(headers, ctx)
+        TraceContextTextMapPropagator().inject(headers, ctx)
+
+        async with aiohttp.ClientSession() as session:
+            logging.info(ensemble_service_url)
+            async with session.post(
+                ensemble_service_url,
+                data=image_bytes,
+                params={"request_id": request_id},
+                headers=headers,
+            ) as response:
+                if response.status != 200:
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail=f"Failed to send image to ensemble service. Status code: {response.status}",
+                    )
+                _ = await response.json()
     return "File accepted"
 
 

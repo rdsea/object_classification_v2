@@ -9,6 +9,17 @@ from datamodel import ImageClassificationModelEnum, InferenceServiceConfig
 from fastapi import FastAPI, Request
 from image_classification_agent import ImageClassificationAgent
 
+from opentelemetry import metrics, trace
+from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+
+# from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+from opentelemetry.sdk.resources import SERVICE_NAME, Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+
 current_directory = os.path.dirname(os.path.abspath(__file__))
 util_directory = os.path.join(current_directory, "..", "util")
 sys.path.append(util_directory)
@@ -17,6 +28,20 @@ sys.path.append(util_directory)
 import utils  # noqa: E402
 from consul import ConsulClient  # noqa: E402
 
+resource = Resource(attributes={SERVICE_NAME: "inference"})
+
+traceProvider = TracerProvider(resource=resource)
+processor = BatchSpanProcessor(
+    OTLPSpanExporter(endpoint="http://localhost:4318/v1/traces")
+)
+traceProvider.add_span_processor(processor)
+trace.set_tracer_provider(traceProvider)
+
+reader = PeriodicExportingMetricReader(
+    OTLPMetricExporter(endpoint="http://localhost:4318/v1/metrics")
+)
+meterProvider = MeterProvider(resource=resource, metric_readers=[reader])
+metrics.set_meter_provider(meterProvider)
 PORT = int(os.environ["PORT"])
 
 # NOTE: model config in the inference service config

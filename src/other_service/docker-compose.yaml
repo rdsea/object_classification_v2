@@ -1,0 +1,17 @@
+version: "3.8"
+
+services:
+  consul:
+    image: hashicorp/consul:latest
+    container_name: consul
+    network_mode: host
+    # ports:
+    #   - "8500:8500"
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    network_mode: host
+    # ports:
+    #   - "5672:5672"
+    #   - "15672:15672"

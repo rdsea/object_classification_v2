@@ -4,6 +4,15 @@
 debug=false
 PORT=8010
 CHOSEN_MODEL="MobileNet"
+# "efficientnet-edgetpu-L_quant",
+# "efficientnet-edgetpu-M_quant",
+# "efficientnet-edgetpu-S_quant",
+# "inception_v1_224_quant",
+# "inception_v2_224_quant",
+# "inception_v4_299_quant",
+# "tf2_mobilenet_v1_1.0_224_ptq",
+# "tf2_mobilenet_v2_1.0_224_ptq",
+# "tf2_mobilenet_v3_edgetpu_1.0_224_ptq"
 
 # Parse command line arguments
 while [[ "$#" -gt 0 ]]; do

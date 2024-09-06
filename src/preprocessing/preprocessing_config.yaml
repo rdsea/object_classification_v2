@@ -5,20 +5,26 @@ processing:
 
 qoa_config:
   client:
-    user_id: aaltosea2
-    instance_id: processing_service_01
-    stage_id: Processing
-    method: REST
+    username: aaltosea2
+    instance_name: preprocessing_service
+    stage_id: processing
+    functionality: REST
     application_name: nii
     role: ml
   connector:
-    amqp_connector:
-      class: AMQP
-      conf:
-        end_point: 195.148.22.62
+    - name: amqp_connector
+      connector_class: AMQP
+      config:
+        end_point: localhost
         exchange_name: nii_inference
         exchange_type: topic
         out_routing_key: nii.processing
+  probes:
+    - probe_type: "process"
+      frequency: 1
+      require_register: false
+      log_latency_flag: false
+      environment: Edge
   registration_url: http://0.0.0.0:5010/registration
 
 external_services:

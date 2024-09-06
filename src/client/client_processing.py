@@ -13,16 +13,16 @@ sys.path.append(util_directory)
 
 
 def send_request(url, requesting_interval, jpeg_images_list):
-    # timer = Timer(
-    #     requesting_interval,
-    #     send_request,
-    #     args=(
-    #         url,
-    #         requesting_interval,
-    #         jpeg_images_list,
-    #     ),
-    # )
-    # timer.start()
+    timer = Timer(
+        requesting_interval,
+        send_request,
+        args=(
+            url,
+            requesting_interval,
+            jpeg_images_list,
+        ),
+    )
+    timer.start()
 
     random_image = random.choice(jpeg_images_list)
     image_path = os.path.join(ds_path, random_image)
@@ -61,7 +61,7 @@ if __name__ == "__main__":
         "--url",
         type=str,
         help="request url",
-        default="http://localhost:5010/processing",
+        default="http://localhost:5010/preprocessing",
     )
 
     # Parse the parameters
