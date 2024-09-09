@@ -5,11 +5,19 @@
 if [ "$1" == "cpu" ] || [ "$1" == "cuda" ]; then
   TAG=$1
 else
-  echo "Usage: $0 {cpu|gpu}"
+  echo "Usage: $0 {cpu|cuda}"
   exit 1
 fi
 
 cd ..
 
 echo ""
-docker build --platform linux/arm64 -t rdsea/onnx_inference:"$TAG" -f ./inference/Dockerfile."$TAG" .
+
+# Determine the platform based on the tag
+if [ "$TAG" == "cpu" ]; then
+  PLATFORM="linux/amd64,linux/arm64"
+else
+  PLATFORM="linux/arm64"
+fi
+
+docker build --platform $PLATFORM -t rdsea/onnx_inference:"$TAG" -f ./inference/Dockerfile."$TAG" .

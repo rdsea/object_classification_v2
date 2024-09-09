@@ -9,20 +9,24 @@ import time
 from typing import Annotated
 
 import aiohttp
-import ensemble_function
 from fastapi import BackgroundTasks, FastAPI, Form, Request
 from fastapi.responses import JSONResponse
-from opentelemetry import metrics, trace
-from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry import trace
 
-# from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+# from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.instrumentation.aiohttp_client import AioHttpClientInstrumentor
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+# from opentelemetry.sdk.metrics import MeterProvider
+# from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
+
+# Enable instrumentation
+AioHttpClientInstrumentor().instrument()
 current_directory = os.path.dirname(os.path.abspath(__file__))
 util_directory = os.path.join(current_directory, "..", "util")
 sys.path.append(util_directory)
@@ -39,12 +43,12 @@ processor = BatchSpanProcessor(
 )
 traceProvider.add_span_processor(processor)
 trace.set_tracer_provider(traceProvider)
-
-reader = PeriodicExportingMetricReader(
-    OTLPMetricExporter(endpoint="http://localhost:4318/v1/metrics")
-)
-meterProvider = MeterProvider(resource=resource, metric_readers=[reader])
-metrics.set_meter_provider(meterProvider)
+tracer = trace.get_tracer(__name__)
+# reader = PeriodicExportingMetricReader(
+#     OTLPMetricExporter(endpoint="http://localhost:4318/v1/metrics")
+# )
+# meterProvider = MeterProvider(resource=resource, metric_readers=[reader])
+# metrics.set_meter_provider(meterProvider)
 config_lock = asyncio.Lock()  # Lock to control access to the global variable
 
 
@@ -109,11 +113,13 @@ async def send_post_request(
 
 
 async def process_image_task(image_data: bytes, request_id: str):
+    current_span = trace.get_current_span()
+    print(current_span)
     ensemble = app.state.config["ensemble"]
-    chosen_ensemble_function = getattr(
-        ensemble_function,
-        app.state.config["aggregating"]["aggregating_func"]["func_name"],
-    )
+    # chosen_ensemble_function = getattr(
+    #     ensemble_function,
+    #     app.state.config["aggregating"]["aggregating_func"]["func_name"],
+    # )
     list_service_url = get_inference_service_url(ensemble)
     logging.info(f"List service url: {list_service_url}")
 
@@ -129,7 +135,7 @@ async def process_image_task(image_data: bytes, request_id: str):
             for task in done:
                 results.append(await task)
             print(results)
-            print(chosen_ensemble_function(results, request_id))
+            # print(chosen_ensemble_function(results, request_id))
 
     else:
         raise RuntimeError("No inference service url")
@@ -174,4 +180,4 @@ def signal_handler(sig, frame):
 
 # Register the signal handler for SIGINT
 signal.signal(signal.SIGINT, signal_handler)
-# FastAPIInstrumentor.instrument_app(app)
+FastAPIInstrumentor.instrument_app(app)

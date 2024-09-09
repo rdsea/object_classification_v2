@@ -3,7 +3,6 @@ import os
 import signal
 import sys
 import time
-from functools import cache
 from typing import Union
 from uuid import uuid4
 
@@ -15,20 +14,22 @@ from fastapi.responses import JSONResponse
 from image_processing_functions import (
     resize_and_pad,
 )
-from opentelemetry import baggage, metrics, trace
-from opentelemetry.baggage.propagation import W3CBaggagePropagator
+from opentelemetry import metrics, trace
+
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.instrumentation.aiohttp_client import AioHttpClientInstrumentor
 
-# from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 from qoa4ml.qoa_client import QoaClient
 
+AioHttpClientInstrumentor().instrument()
 # Service name is required for most backends
 resource = Resource(attributes={SERVICE_NAME: "preprocessing"})
 
@@ -46,6 +47,7 @@ reader = PeriodicExportingMetricReader(
 )
 meterProvider = MeterProvider(resource=resource, metric_readers=[reader])
 metrics.set_meter_provider(meterProvider)
+meter = metrics.get_meter("preprocessing.meter")
 # from rohe.common import rohe_utils
 
 # from rohe.storage.minio import MinioConnector
@@ -100,7 +102,6 @@ accepted_file_types = [
 ]
 
 
-@cache
 def get_ensemble_service_url() -> Union[str, None]:
     try:
         # get tags and query type for image info service
@@ -183,27 +184,29 @@ async def processing_image(file: UploadFile):
         )
     image_bytes = processed_image.tobytes()
     request_id = str(uuid4())
-    with tracer.start_as_current_span("test") as _:
-        ctx = baggage.set_baggage("request_id", request_id)
+    # with tracer.start_as_current_span("preprocessing") as _:
+    #     ctx = baggage.set_baggage("request_id", request_id)
+    #
+    #     headers = {}
+    #     W3CBaggagePropagator().inject(headers, ctx)
+    #     TraceContextTextMapPropagator().inject(headers, ctx)
 
-        headers = {}
-        W3CBaggagePropagator().inject(headers, ctx)
-        TraceContextTextMapPropagator().inject(headers, ctx)
-
-        async with aiohttp.ClientSession() as session:
-            logging.info(ensemble_service_url)
-            async with session.post(
-                ensemble_service_url,
-                data=image_bytes,
-                params={"request_id": request_id},
-                headers=headers,
-            ) as response:
-                if response.status != 200:
-                    raise HTTPException(
-                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                        detail=f"Failed to send image to ensemble service. Status code: {response.status}",
-                    )
-                _ = await response.json()
+    # response_time = meter.create_counter(
+    #     "work.counter", unit="1", description="Counts the amount of work done"
+    # )
+    async with aiohttp.ClientSession() as session:
+        logging.info(ensemble_service_url)
+        async with session.post(
+            ensemble_service_url,
+            data=image_bytes,
+            params={"request_id": request_id},
+        ) as response:
+            if response.status != 200:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Failed to send image to ensemble service. Status code: {response.status}",
+                )
+            _ = await response.json()
     return "File accepted"
 
 
@@ -215,3 +218,4 @@ def signal_handler(sig, frame):
 
 # Register the signal handler for SIGINT
 signal.signal(signal.SIGINT, signal_handler)
+FastAPIInstrumentor.instrument_app(app)
