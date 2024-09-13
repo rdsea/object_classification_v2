@@ -1,10 +1,9 @@
 import os
 import sys
-from typing import Union
 
 import cv2
 import numpy as np
-import onnxruntime as ort
+import tflite_runtime.interpreter as tflite
 from datamodel import (
     ImageClassificationModelEnum,
     ModelConfig,
@@ -26,20 +25,14 @@ class ImageClassificationAgent:
         self,
         chosen_model: ImageClassificationModelEnum,
         model_config: ModelConfig,
-        execution_provider: Union[str, None] = None,
     ):
-        session_options = ort.SessionOptions()
-        providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
-        if execution_provider is not None:
-            providers.insert(0, execution_provider)
-        self.session = ort.InferenceSession(
-            f"./onnx_model/{chosen_model.name}.onnx",
-            providers=providers,
-            sess_options=session_options,
+        self.interpreter = tflite.Interpreter(
+            model_path=f"./tflite_cpu_model/{chosen_model.name}.tflite"
         )
+        self.interpreter.allocate_tensors()
+        self.input_details = self.interpreter.get_input_details()
+        self.output_details = self.interpreter.get_output_details()
         self.model_config = model_config
-
-        self.input_name = self.session.get_inputs()[0].name
 
     def reshape(self, image_array: NDArray, enlarge: bool):
         # NOTE: interpolation choice taken from https://stackoverflow.com/questions/23853632/which-kind-of-interpolation-best-for-resizing-image
@@ -60,9 +53,10 @@ class ImageClassificationAgent:
 
         if len(image_array.shape) != 4:
             image_array = np.expand_dims(image_array, axis=0)
-
-        outputs = self.session.run(None, {self.input_name: image_array})
-        outputs = outputs[0]
+        self.interpreter.set_tensor(self.input_details[0]["index"], image_array)
+        self.interpreter.invoke()
+        output_data = self.interpreter.get_tensor(self.output_details[0]["index"])
+        outputs = np.squeeze(output_data)
 
         predicted_class_index = np.argmax(outputs, axis=1)[0]
         return key_list[predicted_class_index], float(outputs[0][predicted_class_index])

@@ -4,22 +4,16 @@ from pydantic import BaseModel
 
 
 class ImageClassificationModelEnum(Enum):
-    DenseNet121 = "DenseNet121"
-    DenseNet201 = "DenseNet201"
-    EfficientNetB0 = "EfficientNetB0"
-    EfficientNetB7 = "EfficientNetB7"
-    EfficientNetV2L = "EfficientNetV2L"
-    EfficientNetV2S = "EfficientNetV2S"
-    InceptionResNetV2 = "InceptionResNetV2"
-    InceptionV3 = "InceptionV3"
-    MobileNet = "MobileNet"
-    MobileNetV2 = "MobileNetV2"
-    NASNetLarge = "NASNetLarge"
-    NASNetMobile = "NASNetMobile"
-    ResNet50 = "ResNet50"
-    ResNet50V2 = "ResNet50V2"
-    VGG16 = "VGG16"
-    Xception = "Xception"
+    EFFICIENTNET_EDGETPU_L_QUANT = "efficientnet-edgetpu-L_quant"
+    EFFICIENTNET_EDGETPU_M_QUANT = "efficientnet-edgetpu-M_quant"
+    EFFICIENTNET_EDGETPU_S_QUANT = "efficientnet-edgetpu-S_quant"
+    INCEPTION_V1_224_QUANT = "inception_v1_224_quant"
+    INCEPTION_V2_224_QUANT = "inception_v2_224_quant"
+    INCEPTION_V3_299_QUANT_TFLITE = "inception_v3_299_quant.tflite"
+    INCEPTION_V4_299_QUANT = "inception_v4_299_quant"
+    TF2_MOBILENET_V1_1_0_224_PTQ = "tf2_mobilenet_v1_1.0_224_ptq"
+    TF2_MOBILENET_V2_1_0_224_PTQ = "tf2_mobilenet_v2_1.0_224_ptq"
+    TFHUB_TF2_RESNET_50_IMAGENET_PTQ = "tfhub_tf2_resnet_50_imagenet_ptq"
 
 
 class ModelConfig(BaseModel):

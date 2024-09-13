@@ -4,53 +4,35 @@ ensemble: true
 
 # Model Information
 model_config_dict:
-  DenseNet121:
+  efficientnet-edgetpu-L_quant:
+    input_shape: [1, 300, 300, 3]
+    input_mode: tf
+  efficientnet-edgetpu-M_quant:
+    input_shape: [1, 240, 240, 3]
+    input_mode: tf
+  efficientnet-edgetpu-S_quant:
     input_shape: [1, 224, 224, 3]
-    input_mode: torch
-  DenseNet201:
+    input_mode: tf
+  inception_v1_224_quant:
     input_shape: [1, 224, 224, 3]
-    input_mode: torch
-  EfficientNetB0:
+    input_mode: tf
+  inception_v2_224_quant:
     input_shape: [1, 224, 224, 3]
-    input_mode: raw
-  EfficientNetB7:
-    input_shape: [1, 600, 600, 3]
-    input_mode: raw
-  EfficientNetV2L:
-    input_shape: [1, 480, 480, 3]
-    input_mode: raw
-  EfficientNetV2S:
-    input_shape: [1, 384, 384, 3]
-    input_mode: raw
-  InceptionResNetV2:
+    input_mode: tf
+  inception_v3_299_quant.tflite:
     input_shape: [1, 299, 299, 3]
     input_mode: tf
-  InceptionV3:
+  inception_v4_299_quant:
     input_shape: [1, 299, 299, 3]
     input_mode: tf
-  MobileNet:
+  tf2_mobilenet_v1_1.0_224_ptq:
     input_shape: [1, 224, 224, 3]
     input_mode: tf
-  MobileNetV2:
+  tf2_mobilenet_v2_1.0_224_ptq:
     input_shape: [1, 224, 224, 3]
     input_mode: tf
-  NASNetLarge:
-    input_shape: [1, 331, 331, 3]
-    input_mode: tf
-  NASNetMobile:
+  tfhub_tf2_resnet_50_imagenet_ptq:
     input_shape: [1, 224, 224, 3]
-    input_mode: tf
-  ResNet50:
-    input_shape: [1, 224, 224, 3]
-    input_mode: caffe
-  ResNet50V2:
-    input_shape: [1, 224, 224, 3]
-    input_mode: tf
-  VGG16:
-    input_shape: [1, 224, 224, 3]
-    input_mode: caffe
-  Xception:
-    input_shape: [1, 299, 299, 3]
     input_mode: tf
 qoa_config:
   client:
