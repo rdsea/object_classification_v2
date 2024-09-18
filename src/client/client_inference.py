@@ -31,6 +31,7 @@ def send_request(url, requesting_interval, jpeg_images_list):
     root, _ = os.path.splitext(image_path)
     _, synset_id = os.path.basename(root).rsplit("_", 1)
     img = load_img(image_path, target_size=(224, 224))
+    # img = load_img(image_path)
     x = img_to_array(img)
     start_time = time.time()
     response = requests.post(url, data=x.tobytes())
@@ -57,7 +58,7 @@ if __name__ == "__main__":
         "--url",
         type=str,
         help="request url",
-        default="http://localhost:8058/inference",
+        default="http://localhost:8057/inference",
     )
 
     # Parse the parameters

@@ -27,7 +27,7 @@ class ImageClassificationAgent:
         model_config: ModelConfig,
     ):
         self.interpreter = tflite.Interpreter(
-            model_path=f"./tflite_cpu_model/{chosen_model.name}.tflite"
+            model_path=f"./tflite_cpu_model/{chosen_model.value}.tflite"
         )
         self.interpreter.allocate_tensors()
         self.input_details = self.interpreter.get_input_details()
@@ -49,14 +49,16 @@ class ImageClassificationAgent:
                 image_array, image_array.shape[1] > self.model_config.input_shape[1]
             )
 
-        image_array = preprocess_input(image_array, mode=self.model_config.input_mode)
+        # image_array = preprocess_input(image_array, mode=self.model_config.input_mode)
 
         if len(image_array.shape) != 4:
             image_array = np.expand_dims(image_array, axis=0)
+
+        # image_array = image_array.astype(np.uint8)
         self.interpreter.set_tensor(self.input_details[0]["index"], image_array)
         self.interpreter.invoke()
         output_data = self.interpreter.get_tensor(self.output_details[0]["index"])
         outputs = np.squeeze(output_data)
 
-        predicted_class_index = np.argmax(outputs, axis=1)[0]
-        return key_list[predicted_class_index], float(outputs[0][predicted_class_index])
+        predicted_class_index = np.argmax(outputs)
+        return key_list[predicted_class_index]

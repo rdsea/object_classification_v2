@@ -15,6 +15,31 @@ class ImageClassificationModelEnum(Enum):
     TF2_MOBILENET_V2_1_0_224_PTQ = "tf2_mobilenet_v2_1.0_224_ptq"
     TFHUB_TF2_RESNET_50_IMAGENET_PTQ = "tfhub_tf2_resnet_50_imagenet_ptq"
 
+    @staticmethod
+    def from_str(label: str):
+        if label == "EfficientNet-L":
+            return ImageClassificationModelEnum.EFFICIENTNET_EDGETPU_L_QUANT
+        elif label == "EfficientNet-M":
+            return ImageClassificationModelEnum.EFFICIENTNET_EDGETPU_M_QUANT
+        elif label == "EfficientNet-S":
+            return ImageClassificationModelEnum.EFFICIENTNET_EDGETPU_S_QUANT
+        elif label == "Inception_v1":
+            return ImageClassificationModelEnum.INCEPTION_V1_224_QUANT
+        elif label == "Inception_v2":
+            return ImageClassificationModelEnum.INCEPTION_V2_224_QUANT
+        elif label == "Inception_v3":
+            return ImageClassificationModelEnum.INCEPTION_V3_299_QUANT_TFLITE
+        elif label == "Inception_v4":
+            return ImageClassificationModelEnum.INCEPTION_V4_299_QUANT
+        elif label == "MobileNet":
+            return ImageClassificationModelEnum.TF2_MOBILENET_V1_1_0_224_PTQ
+        elif label == "MobileNet_v2":
+            return ImageClassificationModelEnum.TF2_MOBILENET_V2_1_0_224_PTQ
+        elif label == "ResNet50":
+            return ImageClassificationModelEnum.TFHUB_TF2_RESNET_50_IMAGENET_PTQ
+        else:
+            raise NotImplementedError
+
 
 class ModelConfig(BaseModel):
     input_shape: tuple[int, int, int, int]

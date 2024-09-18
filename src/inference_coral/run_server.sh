@@ -2,7 +2,7 @@
 
 # Default values
 debug=false
-PORT=8010
+PORT=8057
 CHOSEN_MODEL="MobileNet"
 # "efficientnet-edgetpu-L_quant",
 # "efficientnet-edgetpu-M_quant",
@@ -12,7 +12,22 @@ CHOSEN_MODEL="MobileNet"
 # "inception_v4_299_quant",
 # "tf2_mobilenet_v1_1.0_224_ptq",
 # "tf2_mobilenet_v2_1.0_224_ptq",
-# "tf2_mobilenet_v3_edgetpu_1.0_224_ptq"
+# tfhub_tf2_resnet_50_imagenet_ptq
+#
+# Model to port mapping
+#TODO: change to random port in range
+declare -A MODEL_PORTS=(
+  ["EfficientNet_L"]=8050
+  ["EfficientNet_M"]=8051
+  ["EfficientNet_S"]=8052
+  ["Inception_v1"]=8053
+  ["Inception_v2"]=8054
+  ["Inception_v3"]=8055
+  ["Inception_v4"]=8056
+  ["MobileNet"]=8057
+  ["MobileNet_v2"]=8058
+  ["ResNet50"]=8058
+)
 
 # Parse command line arguments
 while [[ "$#" -gt 0 ]]; do
@@ -33,6 +48,15 @@ while [[ "$#" -gt 0 ]]; do
   esac
   shift
 done
+
+# Assign default port based on chosen model if no port is provided
+if [[ "$PORT" -eq 0 ]]; then
+  PORT=${MODEL_PORTS[$CHOSEN_MODEL]}
+  if [[ -z "$PORT" ]]; then
+    echo "Unknown model: $CHOSEN_MODEL"
+    exit 1
+  fi
+fi
 
 export PORT
 export CHOSEN_MODEL

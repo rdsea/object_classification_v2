@@ -1,12 +1,13 @@
 [project]
 dependencies = [
-  "fastapi[standard]>=0.111.1",
-  "uvicorn[standard]>=0.30.3",
-  "Pillow==10.4.0",
-  "opencv-python==4.10.0.84",
-  "requests==2.32.3",
-  "qoa4ml",
-  "tflite-runtime",
+    "fastapi[standard]>=0.111.1",
+    "uvicorn[standard]>=0.30.3",
+    "Pillow==10.4.0",
+    "opencv-python==4.10.0.84",
+    "requests==2.32.3",
+    "qoa4ml",
+    "tflite-runtime",
+    "pycoral>=2.0.0",
 ]
 name = "inference_coral"
 version = "0.1.0"
@@ -25,3 +26,7 @@ allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["*.py"]
+
+[[tool.rye.sources]]
+name = "pycoral"
+url = "https://google-coral.github.io/py-repo/"

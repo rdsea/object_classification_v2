@@ -34,13 +34,13 @@ consul_client = ConsulClient(
 )
 
 chosen_model = os.environ["CHOSEN_MODEL"]
-chosen_model = ImageClassificationModelEnum[chosen_model]
-service_id = consul_client.service_register(
-    name=chosen_model.name,
-    address=local_ip,
-    tag=["nii_case", "inference", chosen_model.name],
-    port=PORT,
-)
+chosen_model = ImageClassificationModelEnum.from_str(chosen_model)
+# service_id = consul_client.service_register(
+#     name=chosen_model.name,
+#     address=local_ip,
+#     tag=["nii_case", "inference", chosen_model.name],
+#     port=PORT,
+# )
 
 model_config = config.model_config_dict[chosen_model]
 ml_agent = ImageClassificationAgent(chosen_model, model_config)
@@ -57,10 +57,10 @@ async def inference(request: Request):
     return ml_agent.predict(reconstructed_image)
 
 
-def signal_handler(sig, frame):
-    print("You pressed Ctrl+C! Gracefully shutting down.")
-    consul_client.service_deregister(id=service_id)
-    sys.exit(0)
-
-
-signal.signal(signal.SIGINT, signal_handler)
+# def signal_handler(sig, frame):
+#     print("You pressed Ctrl+C! Gracefully shutting down.")
+#     consul_client.service_deregister(id=service_id)
+#     sys.exit(0)
+#
+#
+# signal.signal(signal.SIGINT, signal_handler)
