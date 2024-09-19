@@ -11,9 +11,7 @@ import cv2
 import numpy as np
 from fastapi import FastAPI, HTTPException, UploadFile, status
 from fastapi.responses import JSONResponse
-from image_processing_functions import (
-    resize_and_pad,
-)
+from image_processing_functions import resize_and_pad, resize
 from opentelemetry import metrics, trace
 
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
@@ -29,7 +27,9 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from qoa4ml.qoa_client import QoaClient
 
-AioHttpClientInstrumentor().instrument()
+np.set_printoptions(threshold=sys.maxsize)
+
+# AioHttpClientInstrumentor().instrument()
 # Service name is required for most backends
 resource = Resource(attributes={SERVICE_NAME: "preprocessing"})
 
@@ -79,11 +79,11 @@ local_ip = utils.get_local_ip()
 consul_client = ConsulClient(
     config=config["external_services"]["service_registry"]["consul_config"]
 )
-service_id = consul_client.service_register(
-    name="preprocessing", address=local_ip, tag=["nii_case"], port=port
-)
-qoa_client = QoaClient(config_dict=config["qoa_config"])
-qoa_client.start_all_probes()
+# service_id = consul_client.service_register(
+#     name="preprocessing", address=local_ip, tag=["nii_case"], port=port
+# )
+# qoa_client = QoaClient(config_dict=config["qoa_config"])
+# qoa_client.start_all_probes()
 
 
 accepted_file_types = [
@@ -168,54 +168,55 @@ async def processing_image(file: UploadFile):
     # NOTE: cv2 and Pillow has different color channel layout
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     shape = image.shape
-
     if shape != (224, 224, 3):
-        processed_image = resize_and_pad(image)
+        processed_image = resize(image)
     else:
         processed_image = image
 
-    start_time = time.time()
-    ensemble_service_url = get_ensemble_service_url()
-    logging.info(f"{(time.time() - start_time)*1000}")
-    if ensemble_service_url is None:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Can't find ensemble service url",
-        )
-    image_bytes = processed_image.tobytes()
-    request_id = str(uuid4())
-    # with tracer.start_as_current_span("preprocessing") as _:
-    #     ctx = baggage.set_baggage("request_id", request_id)
+    print(processed_image)
+
+    # start_time = time.time()
+    # ensemble_service_url = get_ensemble_service_url()
+    # logging.info(f"{(time.time() - start_time)*1000}")
+    # if ensemble_service_url is None:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+    #         detail="Can't find ensemble service url",
+    #     )
+    # image_bytes = processed_image.tobytes()
+    # request_id = str(uuid4())
+    # # with tracer.start_as_current_span("preprocessing") as _:
+    # #     ctx = baggage.set_baggage("request_id", request_id)
+    # #
+    # #     headers = {}
+    # #     W3CBaggagePropagator().inject(headers, ctx)
+    # #     TraceContextTextMapPropagator().inject(headers, ctx)
     #
-    #     headers = {}
-    #     W3CBaggagePropagator().inject(headers, ctx)
-    #     TraceContextTextMapPropagator().inject(headers, ctx)
-
-    # response_time = meter.create_counter(
-    #     "work.counter", unit="1", description="Counts the amount of work done"
-    # )
-    async with aiohttp.ClientSession() as session:
-        logging.info(ensemble_service_url)
-        async with session.post(
-            ensemble_service_url,
-            data=image_bytes,
-            params={"request_id": request_id},
-        ) as response:
-            if response.status != 200:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=f"Failed to send image to ensemble service. Status code: {response.status}",
-                )
-            _ = await response.json()
-    return "File accepted"
+    # # response_time = meter.create_counter(
+    # #     "work.counter", unit="1", description="Counts the amount of work done"
+    # # )
+    # async with aiohttp.ClientSession() as session:
+    #     logging.info(ensemble_service_url)
+    #     async with session.post(
+    #         ensemble_service_url,
+    #         data=image_bytes,
+    #         params={"request_id": request_id},
+    #     ) as response:
+    #         if response.status != 200:
+    #             raise HTTPException(
+    #                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+    #                 detail=f"Failed to send image to ensemble service. Status code: {response.status}",
+    #             )
+    #         _ = await response.json()
+    # return "File accepted"
 
 
-def signal_handler(sig, frame):
-    logging.info("You pressed Ctrl+C! Gracefully shutting down.")
-    consul_client.service_deregister(id=service_id)
-    sys.exit(0)
-
-
-# Register the signal handler for SIGINT
-signal.signal(signal.SIGINT, signal_handler)
-FastAPIInstrumentor.instrument_app(app)
+# def signal_handler(sig, frame):
+#     logging.info("You pressed Ctrl+C! Gracefully shutting down.")
+#     consul_client.service_deregister(id=service_id)
+#     sys.exit(0)
+#
+#
+# # Register the signal handler for SIGINT
+# signal.signal(signal.SIGINT, signal_handler)
+# FastAPIInstrumentor.instrument_app(app)

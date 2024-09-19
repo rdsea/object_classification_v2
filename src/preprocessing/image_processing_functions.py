@@ -35,6 +35,11 @@ def resize_and_pad(image: MatLike, target_size: tuple[int, int, int] = (224, 224
     return padded
 
 
+def resize(image: MatLike, target_size: tuple[int, int] = (224, 224)):
+    resized_image = cv2.resize(image, target_size, interpolation=cv2.INTER_AREA)
+    return resized_image
+
+
 # def resize_and_pad(image: MatLike, target_size: tuple[int, int, int] = (32, 32, 3)):
 #     target_height, target_width, dim = target_size
 #
