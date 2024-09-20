@@ -62,7 +62,7 @@ export PORT
 export CHOSEN_MODEL
 
 if [[ "$debug" == true ]]; then
-  sudo $HOME/RunningExample/new_object_classification/src/inference_coral/.venv/bin/python -m fastapi dev --host 0.0.0.0 --port "$PORT" inference.py
+  sudo -E /usr/bin/python3 -m fastapi dev --host 0.0.0.0 --port "$PORT" inference.py
 else
-  sudo $HOME/RunningExample/new_object_classification/src/inference_coral/.venv/bin/uvicorn  --host 0.0.0.0 --port "$PORT" inference:app
+  sudo -E /usr/bin/python3 -m uvicorn --host 0.0.0.0 --port "$PORT" inference:app
 fi

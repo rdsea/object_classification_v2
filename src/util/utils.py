@@ -5,7 +5,7 @@ import socket
 
 import yaml
 from consul import ConsulClient
-from qoa4ml.utils.logger import qoa_logger
+import logging
 
 
 def get_local_ip():
@@ -52,8 +52,8 @@ def handle_service_query(
         if query_type == "quorum":
             return consul_client.get_quorum_service_instances(service_name, tags)
 
-        qoa_logger.error(f"Invalid query type: {query_type}")
+        logging.error(f"Invalid query type: {query_type}")
         return None
     except Exception as e:
-        qoa_logger.error(f"Error in handle_service_query: {e}")
+        logging.error(f"Error in handle_service_query: {e}")
         return None

@@ -3,10 +3,12 @@ import sys
 
 import cv2
 import numpy as np
-from numpy._typing import NDArray
 from pycoral.adapters import classify, common
 from pycoral.utils.dataset import read_label_file
 from pycoral.utils.edgetpu import make_interpreter
+from pycoral.pybind._pywrap_coral import SetVerbosity as set_verbosity
+set_verbosity(10)
+
 
 from datamodel import (
     ImageClassificationModelEnum,
@@ -30,7 +32,7 @@ class ImageClassificationAgent:
         model_config: ModelConfig,
     ):
         self.interpreter = make_interpreter(
-            f"./tflite_cpu_model/{chosen_model.value}.tflite"
+            f"./tflite_tpu_model/{chosen_model.value}_edgetpu.tflite"
         )
         self.interpreter.allocate_tensors()
 
@@ -48,7 +50,7 @@ class ImageClassificationAgent:
         self.std = 128.0
         self.mean = 128.0
 
-    def reshape(self, image_array: NDArray, enlarge: bool):
+    def reshape(self, image_array, enlarge: bool):
         # NOTE: interpolation choice taken from https://stackoverflow.com/questions/23853632/which-kind-of-interpolation-best-for-resizing-image
         reshaped_image = cv2.resize(
             image_array,
@@ -57,7 +59,7 @@ class ImageClassificationAgent:
         )
         return reshaped_image
 
-    def predict(self, image_array: NDArray):
+    def predict(self, image_array):
         if image_array.shape[1] != self.model_config.input_shape[1]:
             image_array = self.reshape(
                 image_array, image_array.shape[1] > self.model_config.input_shape[1]

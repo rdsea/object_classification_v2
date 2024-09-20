@@ -1,6 +1,7 @@
 fastapi[standard]
 uvicorn[standard]
 Pillow
-opencv-python
+numpy==1.16
+opencv-python==3.4.17.63
 requests
 
