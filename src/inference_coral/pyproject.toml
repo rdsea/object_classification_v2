@@ -5,13 +5,12 @@ dependencies = [
     "Pillow==10.4.0",
     "opencv-python==4.10.0.84",
     "requests==2.32.3",
-    "qoa4ml",
     "tflite-runtime",
     "pycoral>=2.0.0",
 ]
 name = "inference_coral"
 version = "0.1.0"
-requires-python = "== 3.9.19"
+requires-python = ">= 3.8"
 
 [build-system]
 requires = ["hatchling"]

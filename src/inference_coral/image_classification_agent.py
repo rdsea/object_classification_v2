@@ -82,3 +82,4 @@ class ImageClassificationAgent:
         self.interpreter.invoke()
         classes = classify.get_classes(self.interpreter, self.top_k, self.threshold)
         return classes
+
