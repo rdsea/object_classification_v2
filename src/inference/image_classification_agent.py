@@ -5,11 +5,9 @@ from typing import Optional
 import cv2
 import numpy as np
 import onnxruntime as ort
-from datamodel import (
-    ImageClassificationModelEnum,
-    ModelConfig,
-)
 from numpy._typing import NDArray
+
+from datamodel import ImageClassificationModelEnum, ModelConfig
 
 current_directory = os.path.dirname(os.path.abspath(__file__))
 util_directory = os.path.join(current_directory, "..", "util")

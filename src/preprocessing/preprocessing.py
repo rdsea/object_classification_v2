@@ -11,25 +11,22 @@ import cv2
 import numpy as np
 from fastapi import FastAPI, HTTPException, UploadFile, status
 from fastapi.responses import JSONResponse
-from image_processing_functions import resize_and_pad, resize
-from opentelemetry import metrics, trace
+from image_processing_functions import resize
+from opentelemetry import trace
 
-from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.aiohttp_client import AioHttpClientInstrumentor
 
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
-from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+# from opentelemetry.sdk.metrics import MeterProvider
+# from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from qoa4ml.qoa_client import QoaClient
 
-np.set_printoptions(threshold=sys.maxsize)
 
-# AioHttpClientInstrumentor().instrument()
+AioHttpClientInstrumentor().instrument()
 # Service name is required for most backends
 resource = Resource(attributes={SERVICE_NAME: "preprocessing"})
 
@@ -42,12 +39,12 @@ trace.set_tracer_provider(traceProvider)
 
 
 tracer = trace.get_tracer(__name__)
-reader = PeriodicExportingMetricReader(
-    OTLPMetricExporter(endpoint="http://localhost:4318/v1/metrics")
-)
-meterProvider = MeterProvider(resource=resource, metric_readers=[reader])
-metrics.set_meter_provider(meterProvider)
-meter = metrics.get_meter("preprocessing.meter")
+# reader = PeriodicExportingMetricReader(
+#     OTLPMetricExporter(endpoint="http://localhost:4318/v1/metrics")
+# )
+# meterProvider = MeterProvider(resource=resource, metric_readers=[reader])
+# metrics.set_meter_provider(meterProvider)
+# meter = metrics.get_meter("preprocessing.meter")
 # from rohe.common import rohe_utils
 
 # from rohe.storage.minio import MinioConnector
@@ -79,9 +76,9 @@ local_ip = utils.get_local_ip()
 consul_client = ConsulClient(
     config=config["external_services"]["service_registry"]["consul_config"]
 )
-# service_id = consul_client.service_register(
-#     name="preprocessing", address=local_ip, tag=["nii_case"], port=port
-# )
+service_id = consul_client.service_register(
+    name="preprocessing", address=local_ip, tag=["nii_case"], port=port
+)
 # qoa_client = QoaClient(config_dict=config["qoa_config"])
 # qoa_client.start_all_probes()
 
@@ -173,50 +170,48 @@ async def processing_image(file: UploadFile):
     else:
         processed_image = image
 
-    print(processed_image)
-
-    # start_time = time.time()
-    # ensemble_service_url = get_ensemble_service_url()
-    # logging.info(f"{(time.time() - start_time)*1000}")
-    # if ensemble_service_url is None:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-    #         detail="Can't find ensemble service url",
-    #     )
-    # image_bytes = processed_image.tobytes()
-    # request_id = str(uuid4())
-    # # with tracer.start_as_current_span("preprocessing") as _:
-    # #     ctx = baggage.set_baggage("request_id", request_id)
-    # #
-    # #     headers = {}
-    # #     W3CBaggagePropagator().inject(headers, ctx)
-    # #     TraceContextTextMapPropagator().inject(headers, ctx)
+    start_time = time.time()
+    ensemble_service_url = get_ensemble_service_url()
+    logging.info(f"{(time.time() - start_time)*1000}")
+    if ensemble_service_url is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Can't find ensemble service url",
+        )
+    image_bytes = processed_image.tobytes()
+    request_id = str(uuid4())
+    # with tracer.start_as_current_span("preprocessing") as _:
+    #     ctx = baggage.set_baggage("request_id", request_id)
     #
-    # # response_time = meter.create_counter(
-    # #     "work.counter", unit="1", description="Counts the amount of work done"
-    # # )
-    # async with aiohttp.ClientSession() as session:
-    #     logging.info(ensemble_service_url)
-    #     async with session.post(
-    #         ensemble_service_url,
-    #         data=image_bytes,
-    #         params={"request_id": request_id},
-    #     ) as response:
-    #         if response.status != 200:
-    #             raise HTTPException(
-    #                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-    #                 detail=f"Failed to send image to ensemble service. Status code: {response.status}",
-    #             )
-    #         _ = await response.json()
-    # return "File accepted"
+    #     headers = {}
+    #     W3CBaggagePropagator().inject(headers, ctx)
+    #     TraceContextTextMapPropagator().inject(headers, ctx)
+
+    # response_time = meter.create_counter(
+    #     "work.counter", unit="1", description="Counts the amount of work done"
+    # )
+    async with aiohttp.ClientSession() as session:
+        logging.info(ensemble_service_url)
+        async with session.post(
+            ensemble_service_url,
+            data=image_bytes,
+            params={"request_id": request_id},
+        ) as response:
+            if response.status != 200:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Failed to send image to ensemble service. Status code: {response.status}",
+                )
+            _ = await response.json()
+    return "File accepted"
 
 
-# def signal_handler(sig, frame):
-#     logging.info("You pressed Ctrl+C! Gracefully shutting down.")
-#     consul_client.service_deregister(id=service_id)
-#     sys.exit(0)
-#
-#
-# # Register the signal handler for SIGINT
-# signal.signal(signal.SIGINT, signal_handler)
-# FastAPIInstrumentor.instrument_app(app)
+def signal_handler(sig, frame):
+    logging.info("You pressed Ctrl+C! Gracefully shutting down.")
+    consul_client.service_deregister(id=service_id)
+    sys.exit(0)
+
+
+# Register the signal handler for SIGINT
+signal.signal(signal.SIGINT, signal_handler)
+FastAPIInstrumentor.instrument_app(app)

@@ -77,8 +77,8 @@ def _preprocess_numpy_input(x, data_format, mode):
 def preprocess_input(x, data_format="channels_last", mode="caffe"):
     """Preprocesses a tensor or Numpy array encoding a batch of images."""
 
-    # if not issubclass(x.dtype.type, np.floating):
-    #     x = x.astype(np.float32, copy=False)
+    if not issubclass(x.dtype.type, np.floating):
+        x = x.astype(np.float32, copy=False)
 
     if mode == "raw":
         return x

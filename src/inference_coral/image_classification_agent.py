@@ -4,10 +4,8 @@ import sys
 import cv2
 import numpy as np
 from pycoral.adapters import classify, common
-from pycoral.utils.dataset import read_label_file
-from pycoral.utils.edgetpu import make_interpreter
 from pycoral.pybind._pywrap_coral import SetVerbosity as set_verbosity
-set_verbosity(10)
+from pycoral.utils.edgetpu import make_interpreter
 
 
 from datamodel import (
@@ -15,12 +13,12 @@ from datamodel import (
     ModelConfig,
 )
 
+set_verbosity(10)
 current_directory = os.path.dirname(os.path.abspath(__file__))
 util_directory = os.path.join(current_directory, "..", "util")
 sys.path.append(util_directory)
 
 from classes import IMAGENET2012_CLASSES  # noqa: E402
-from preprocessing import preprocess_input  # noqa: E402
 
 key_list = list(IMAGENET2012_CLASSES.keys())
 
@@ -84,4 +82,3 @@ class ImageClassificationAgent:
         self.interpreter.invoke()
         classes = classify.get_classes(self.interpreter, self.top_k, self.threshold)
         return classes
-

@@ -98,8 +98,7 @@ app = FastAPI()
 async def inference(request: Request):
     image_bytes = await request.body()
 
-    headers = dict(request.headers)
-    print(headers)
+    # headers = dict(request.headers)
     # carrier = {"traceparent": headers["traceparent"]}
     # ctx = TraceContextTextMapPropagator().extract(carrier=carrier)
     # print(f"Received context: {ctx}")
