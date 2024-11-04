@@ -33,7 +33,7 @@ tmux send-keys -t my_window.3 'source .venv/bin/activate' C-m
 tmux send-keys -t my_window.3 './run_server.sh' C-m
 
 tmux send-keys -t my_window.4 "cd $SCRIPT_DIR/src/inference" C-m
-tmux send-keys -t my_window.4 'rye sync' C-m
+tmux send-keys -t my_window.4 'rye sync --all-features' C-m
 tmux send-keys -t my_window.4 'source .venv/bin/activate' C-m
 tmux send-keys -t my_window.4 './run_server.sh' C-m
 
