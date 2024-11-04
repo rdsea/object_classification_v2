@@ -13,7 +13,7 @@ tmux new-window -n my_window
 
 # Run commands in each pane
 tmux send-keys -t my_window.1 "cd $SCRIPT_DIR/src/other_service" C-m
-tmux send-keys -t my_window.1 'docker-compose up' C-m
+tmux send-keys -t my_window.1 'docker compose up' C-m
 
 sleep 5
 
