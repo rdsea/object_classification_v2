@@ -32,6 +32,12 @@ rsync -r aaltosea@edge-raspi1.cs.aalto.fi:/home/aaltosea/RunningExample/new_obje
 mv ./artifact/model_test/onnx/onnx_model ./inference
 ```
 
+or download it to src/inference/onnx_model with:
+
+```bash
+rsync -r rsync -r aaltosea@edge-jetxavier1.cs.aalto.fi:/mnt/sd_card/git/RunningExample/new_object_classification/src/artifact/model_test/onnx/onnx_model/ ./onnx_model
+```
+
 4. Run the inference service
 
 - Run the server by following. Add --debug flag for auto-reload during development
