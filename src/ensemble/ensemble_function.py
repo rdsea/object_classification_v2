@@ -1,8 +1,9 @@
 import logging
+from typing import Union
 
 
 # ---------------------------------------------------------
-def average_probability(predictions: list, request_id: str) -> dict | None:
+def average_probability(predictions: list, request_id: str) -> Union[dict, None]:
     """
     Aggregates the probabilities of predictions from multiple models for ensemble classification.
 

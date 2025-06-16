@@ -3,6 +3,7 @@ import logging
 import os
 import sys
 import time
+from typing import Union
 from uuid import uuid4
 
 import aiohttp
@@ -39,7 +40,7 @@ if os.environ.get("MANUAL_TRACING"):
     tracer = trace.get_tracer(__name__)
 
 ENSEMBLE_SERVICE_URL = (
-    "http://ensemble-service.default.svc.cluster.local:5011/ensemble_service"
+    "http://ensemble.ziti-controller.private:5011/ensemble_service"
 )
 if os.environ.get("DOCKER"):
     ENSEMBLE_SERVICE_URL = "http://ensemble:5011/ensemble_service"
@@ -91,7 +92,7 @@ async def get_test():
     return JSONResponse(content={"response": response}, status_code=200)
 
 
-def validate_image_type(content_type: str | None):
+def validate_image_type(content_type: Union[str, None]):
     if content_type is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

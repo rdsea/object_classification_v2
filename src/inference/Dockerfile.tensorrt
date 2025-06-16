@@ -1,5 +1,4 @@
-FROM dustynv/onnxruntime:1.20.2-r36.4.0
-
+FROM nvcr.io/nvidia/l4t-tensorrt:r10.3.0-runtime
 
 WORKDIR /object_classification
 
