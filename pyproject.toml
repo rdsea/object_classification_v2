@@ -1,5 +1,5 @@
 [project]
-name = "object_classification"
+name = "object_detection"
 version = "0.1.0"
 description = "Add your description here"
 authors = [{ name = "nguu0123", email = "nguu0123@gmail.com" }]
@@ -16,11 +16,4 @@ virtual = true
 allow-direct-references = true
 
 [tool.rye.workspace]
-members = [
-  # "src/*",
-  "src/database",
-  "src/ensemble",
-  "src/inference",
-  "src/preprocessing",
-
-]
+members = ["src/*"]
