@@ -1,13 +1,11 @@
 import os
 import sys
-from typing import Optional
 
 import cv2
 import numpy as np
 import onnxruntime as ort
-from numpy._typing import NDArray
-
 from datamodel import ImageClassificationModelEnum, ModelConfig
+from numpy._typing import NDArray
 
 current_directory = os.path.dirname(os.path.abspath(__file__))
 util_directory = os.path.join(current_directory, "..", "util")
@@ -24,7 +22,7 @@ class ImageClassificationAgent:
         self,
         chosen_model: ImageClassificationModelEnum,
         model_config: ModelConfig,
-        execution_provider: Optional[str] = None,
+        execution_provider: str | None = None,
     ):
         session_options = ort.SessionOptions()
         providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]

@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import json
+import logging
 import socket
 
 import yaml
 from consul import ConsulClient
-import logging
 
 
 def get_local_ip():

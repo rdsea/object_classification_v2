@@ -37,9 +37,14 @@ external_services:
       url: http://localhost:8500
 
 ensemble:
-  MobileNet:
-    type: one
-    tags: ["nii_case"]
-  EfficientNetB0:
-    type: one
-    tags: ["nii_case"]
+  - MobileNetV2
+  - EfficientNetB0
+
+rabbitmq:
+  # Get the username and password using
+  # username:  kubectl get secret rabbit-cluster-default-user -o jsonpath="{.data.username}" | base64 --decode
+  # password: kubectl get secret rabbit-cluster-default-user -o jsonpath="{.data.password}" | base64 --decode
+  url: rabbitmq
+  queue_name: "object_detection_result"
+  username: default_username
+  password: default_password

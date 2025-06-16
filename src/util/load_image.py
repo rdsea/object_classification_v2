@@ -4,7 +4,6 @@ Taken from https://github.com/keras-team/keras/blob/v3.3.3/keras/src/utils/image
 
 import io
 import pathlib
-from typing import Union
 
 import numpy as np
 from PIL import Image
@@ -21,7 +20,7 @@ PIL_INTERPOLATION_METHODS = {
 
 
 def load_img(
-    path: Union[pathlib.Path, bytes, str, io.BytesIO],
+    path: pathlib.Path | bytes | str | io.BytesIO,
     color_mode="rgb",
     target_size=None,
     interpolation="nearest",
@@ -99,10 +98,23 @@ def img_to_array(img: ImageFile, dtype=None):
     Example:
 
     ```python
-    from PIL import Image
-    img_data = np.random.random(size=(100, 100, 3))
-    img = keras.utils.array_to_img(img_data)
-    array = keras.utils.image.img_to_array(img)
+    from PIL import (
+        Image,
+    )
+
+    img_data = np.random.random(
+        size=(
+            100,
+            100,
+            3,
+        )
+    )
+    img = keras.utils.array_to_img(
+        img_data
+    )
+    array = keras.utils.image.img_to_array(
+        img
+    )
     ```
 
     Args:
