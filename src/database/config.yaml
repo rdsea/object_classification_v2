@@ -4,10 +4,10 @@ rabbitmq:
   # password: kubectl get secret rabbit-cluster-default-user -o jsonpath="{.data.password}" | base64 --decode
   url: rabbitmq
   queue_name: object_detection_result
-  username: default_username
-  password: default_password
+  username: guest
+  password: guest
 
 mongodb:
   url: mongodb
-  username: default_username
-  password: default_password
+  username: guest
+  password: guest
