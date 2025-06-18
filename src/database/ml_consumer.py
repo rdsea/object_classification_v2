@@ -29,7 +29,7 @@ def get_mongodb_connection_url(config):
 
 
 def get_rabbitmq_connection_url_openziti(config):
-    return f"amqp://{config['rabbitmq']['username']}:{config['rabbitmq']['password']}@{config['rabbitmq']['url']}.ziti-controller.private"
+    return f"amqp://{config['rabbitmq']['username']}:{config['rabbitmq']['password']}@{config['rabbitmq']['url']}"
 
 
 def get_mongodb_connection_url_openziti(config):
