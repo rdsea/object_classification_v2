@@ -85,7 +85,9 @@ def get_rabbitmq_connection_url(config: dict):
 
 
 def get_rabbitmq_connection_url_openziti(config: dict):
-    rabbitmq_url = f"config["rabbitmq"]["url"].ziti-controller.private"  # Example config
+    rabbitmq_url = (
+        f"{config['rabbitmq']['url']}.ziti-controller.private"  # Example config
+    )
     username = config["rabbitmq"]["username"]
     password = config["rabbitmq"]["password"]
     return f"amqp://{username}:{password}@{rabbitmq_url}"
