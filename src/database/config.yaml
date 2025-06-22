@@ -8,6 +8,6 @@ rabbitmq:
   password: guest
 
 mongodb:
-  url: mongodb
+  url: database
   username: guest
   password: guest
