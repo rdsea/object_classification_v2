@@ -19,7 +19,8 @@ jobs:
             dockerfile: ensemble/Dockerfile
           - name: inference
             dir: src/inference
-            dockerfile: inference/Dockerfile
+            dockerfile_cpu: inference/Dockerfile.cpu
+            dockerfile_gpu: inference/Dockerfile.gpu
 
     steps:
       - name: Checkout repository
@@ -64,10 +65,14 @@ jobs:
           pip install gdown
           # Replace with your actual Google Drive folder URL or ID
           gdown --folder https://drive.google.com/drive/folders/1199uWd593syj7WHTCOdEbw4SHJQXQySo --output ./src/inference/
+          docker buildx build --platform linux/amd64,linux/arm64  -t rdsea/${{ matrix.image.name }}:cpu -f ${{ matrix.image.dockerfile_cpu }} .
+          docker buildx build --platform linux/amd64,linux/arm64  -t rdsea/${{ matrix.image.name }}:gpu -f ${{ matrix.image.dockerfile_gpu }} .
+          docker push rdsea/${{ matrix.image.name }}:cpu
+          docker push rdsea/${{ matrix.image.name }}:gpu
 
       - name: Build and push ${{ matrix.image.name }} image
-        if: steps.changes.outputs.changed == 'true'
+        if: steps.changes.outputs.changed == 'true' && matrix.image.name != 'inference'
         working-directory: ./src
         run: |
-          docker build -t rdsea/${{ matrix.image.name }}:latest -f ${{ matrix.image.dockerfile }} .
-          # docker push rdsea/${{ matrix.image.name }}:latest
+          docker buildx build --platform linux/amd64,linux/arm64  -t rdsea/${{ matrix.image.name }}:latest -f ${{ matrix.image.dockerfile }} .
+          docker push rdsea/${{ matrix.image.name }}:latest
