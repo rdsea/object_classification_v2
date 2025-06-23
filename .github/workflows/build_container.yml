@@ -4,6 +4,12 @@ on:
   push:
     paths:
       - "src/**" # trigger only on src changes
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Custom image tag"
+        required: true
+        # default: "manual"
 
 jobs:
   build:
@@ -14,13 +20,18 @@ jobs:
           - name: preprocessing
             dir: src/preprocessing
             dockerfile: preprocessing/Dockerfile
+
           - name: ensemble
             dir: src/ensemble
             dockerfile: ensemble/Dockerfile
-          - name: inference
+
+          - name: inference_cpu
             dir: src/inference
-            dockerfile_cpu: inference/Dockerfile.cpu
-            dockerfile_gpu: inference/Dockerfile.gpu
+            dockerfile: inference/Dockerfile.cpu
+
+          - name: inference_gpu
+            dir: src/inference
+            dockerfile: inference/Dockerfile.gpu
 
     steps:
       - name: Checkout repository
@@ -60,20 +71,23 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Download inference data from Google Drive
-        if: matrix.image.name == 'inference' && steps.changes.outputs.changed == 'true'
+        if: (matrix.name == 'inference_cpu' || matrix.name == 'inference_gpu') && steps.changes.outputs.changed == 'true'
         working-directory: ./src
         run: |
           pip install gdown
           # Replace with your actual Google Drive folder URL or ID
           gdown --folder https://drive.google.com/drive/folders/1199uWd593syj7WHTCOdEbw4SHJQXQySo --output ./inference/
-          docker buildx build --platform linux/amd64,linux/arm64  -t rdsea/${{ matrix.image.name }}:cpu -f ${{ matrix.image.dockerfile_cpu }} .
-          docker buildx build --platform linux/amd64,linux/arm64  -t rdsea/${{ matrix.image.name }}:gpu -f ${{ matrix.image.dockerfile_gpu }} .
-          docker push rdsea/${{ matrix.image.name }}:cpu
-          docker push rdsea/${{ matrix.image.name }}:gpu
+          docker buildx build --platform linux/amd64,linux/arm64 \
+            -t rdsea/${{ matrix.image.name }}:${{ github.event.inputs.image_tag || 'latest' }} \
+            -f ${{ matrix.image.dockerfile }} .
+
+          docker push rdsea/${{ matrix.image.name }}:${{ github.event.inputs.image_tag || 'latest' }}
 
       - name: Build and push ${{ matrix.image.name }} image
-        if: steps.changes.outputs.changed == 'true' && matrix.image.name != 'inference'
+        if: steps.changes.outputs.changed == 'true' && ( matrix.name == 'preprocessing' || matrix.name == 'ensemble')
         working-directory: ./src
         run: |
-          docker buildx build --platform linux/amd64,linux/arm64  -t rdsea/${{ matrix.image.name }}:latest -f ${{ matrix.image.dockerfile }} .
-          docker push rdsea/${{ matrix.image.name }}:latest
+          docker buildx build --platform linux/amd64,linux/arm64 \
+            -t rdsea/${{ matrix.image.name }}:${{ github.event.inputs.image_tag || 'latest' }} \
+            -f ${{ matrix.image.dockerfile }} .
+          docker push rdsea/${{ matrix.image.name }}:${{ github.event.inputs.image_tag || 'latest' }}
