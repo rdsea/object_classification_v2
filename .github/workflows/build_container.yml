@@ -79,9 +79,7 @@ jobs:
           gdown --folder https://drive.google.com/drive/folders/1199uWd593syj7WHTCOdEbw4SHJQXQySo --output ./inference/
           docker buildx build --platform linux/amd64,linux/arm64 \
             -t rdsea/${{ matrix.image.name }}:${{ github.event.inputs.image_tag || 'latest' }} \
-            -f ${{ matrix.image.dockerfile }}  --output type=docker . 
-
-          docker push rdsea/${{ matrix.image.name }}:${{ github.event.inputs.image_tag || 'latest' }}
+            -f ${{ matrix.image.dockerfile }}  --output type=registry .
 
       - name: Build and push ${{ matrix.image.name }} image
         if: steps.changes.outputs.changed == 'true' && ( matrix.image.name == 'preprocessing' || matrix.image.name == 'ensemble')
@@ -89,5 +87,4 @@ jobs:
         run: |
           docker buildx build --platform linux/amd64,linux/arm64 \
             -t rdsea/${{ matrix.image.name }}:${{ github.event.inputs.image_tag || 'latest' }} \
-            -f ${{ matrix.image.dockerfile }} --output type=docker .
-          docker push rdsea/${{ matrix.image.name }}:${{ github.event.inputs.image_tag || 'latest' }}
+            -f ${{ matrix.image.dockerfile }} --output type=registry .
