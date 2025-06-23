@@ -1,0 +1,73 @@
+name: ci
+
+on:
+  push:
+    paths:
+      - "src/**" # trigger only on src changes
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        image:
+          - name: preprocessing
+            dir: src/preprocessing
+            dockerfile: preprocessing/Dockerfile
+          - name: ensemble
+            dir: src/ensemble
+            dockerfile: ensemble/Dockerfile
+          - name: inference
+            dir: src/inference
+            dockerfile: inference/Dockerfile
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 2 # needed for git diff between commits
+
+      - name: Check if ${{ matrix.image.dir }} changed
+        id: changes
+        run: |
+          echo "Checking changes in ${{ matrix.image.dir }}..."
+          # Get the list of changed files between current and previous commit
+          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          # Check if any changed file is under the relevant directory
+          if echo "$CHANGED_FILES" | grep -q "^${{ matrix.image.dir }}/"; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Login to Docker Hub
+        if: steps.changes.outputs.changed == 'true'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up QEMU
+        if: steps.changes.outputs.changed == 'true'
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        if: steps.changes.outputs.changed == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Download inference data from Google Drive
+        if: matrix.image.name == 'inference' && steps.changes.outputs.changed == 'true'
+        run: |
+          pip install gdown
+          # Replace with your actual Google Drive folder URL or ID
+          gdown --folder https://drive.google.com/drive/folders/1199uWd593syj7WHTCOdEbw4SHJQXQySo --output ./src/inference/
+
+      - name: Build and push ${{ matrix.image.name }} image
+        if: steps.changes.outputs.changed == 'true'
+        working-directory: ./src
+        run: |
+          docker build -t rdsea/${{ matrix.image.name }}:latest -f ${{ matrix.image.dockerfile }} .
+          # docker push rdsea/${{ matrix.image.name }}:latest
