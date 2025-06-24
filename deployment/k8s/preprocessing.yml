@@ -33,7 +33,7 @@ spec:
               value: "http://jaeger-collector.observe.svc.cluster.local:4318/v1/traces"
           resources:
             requests:
-              cpu: "500mm"
+              cpu: "500m"
               memory: "512Mi"
             limits:
               cpu: "500m"
