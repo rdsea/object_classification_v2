@@ -32,6 +32,13 @@ spec:
               value: "true"
             - name: OTEL_ENDPOINT
               value: "http://jaeger-collector.observe.svc.cluster.local:4318/v1/traces"
+          resources:
+            requests:
+              cpu: "2000m"
+              memory: "512Mi"
+            limits:
+              cpu: "3000m"
+              memory: "1024Mi"
 ---
 apiVersion: v1
 kind: Service

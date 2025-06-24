@@ -33,6 +33,13 @@ spec:
               value: "http://jaeger-collector.observe.svc.cluster.local:4318/v1/traces"
             - name: SEND_TO_QUEUE
               value: "false"
+          resources:
+            requests:
+              cpu: "1000m"
+              memory: "1024Mi"
+            limits:
+              cpu: "1500m"
+              memory: "2048Mi"
 ---
 apiVersion: v1
 kind: Service
@@ -54,7 +61,7 @@ spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: ensemle
+    name: ensemble
   minReplicas: 1
   maxReplicas: 5
   metrics:
