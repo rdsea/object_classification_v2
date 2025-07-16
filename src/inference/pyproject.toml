@@ -12,11 +12,11 @@ dependencies = [
   "opentelemetry-instrumentation-aiohttp-client>=0.48b0",
 ]
 
-optional-dependencies.cpu = ["onnxruntime==1.18.1"]
+optional-dependencies.cpu = ["onnxruntime"]
 
 name = "inference"
 version = "0.1.0"
-requires-python = "== 3.9.19"
+requires-python = "== 3.10.18"
 
 [tool.rye]
 managed = true

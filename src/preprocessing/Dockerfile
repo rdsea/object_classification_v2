@@ -2,9 +2,11 @@ FROM rdsea/debian-slim-opencv:latest
 
 WORKDIR /image_preprocessing/preprocessing
 
-COPY --from=ghcr.io/astral-sh/uv:0.4.3 /uv /bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.7.21 /uv /uvx /bin/
 
 COPY ./preprocessing/*.toml ./
+
+RUN uv python pin 3.10.18
 
 RUN uv sync --compile-bytecode --no-cache
 

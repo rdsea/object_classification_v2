@@ -3,12 +3,14 @@ FROM debian:stable-slim
 WORKDIR /ensemble
 
 
-COPY --from=ghcr.io/astral-sh/uv:0.4.3 /uv /bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.7.21 /uv /uvx /bin/
 
 COPY ./ensemble/*.toml ./
 
 
 COPY ./ensemble/run_server.sh ./ensemble/run_server.sh
+
+RUN uv python pin 3.10.18
 
 RUN uv sync --compile-bytecode --no-cache
 
