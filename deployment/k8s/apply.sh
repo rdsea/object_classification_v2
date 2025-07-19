@@ -1,5 +1,5 @@
 #!/bin/bash
-kubectl apply -f EfficientNetB0.yml
-kubectl apply -f MobileNetV2.yml
-kubectl apply -f ensemble.yml
-kubectl apply -f preprocessing.yml
+kubectl apply -f EfficientNetB0.yaml
+kubectl apply -f MobileNetV2.yaml
+kubectl apply -f ensemble.yaml
+kubectl apply -f preprocessing.yaml

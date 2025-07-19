@@ -1,5 +1,5 @@
 #!/bin/bash
-kubectl delete -f EfficientNetB0.yml
-kubectl delete -f MobileNetV2.yml
-kubectl delete -f ensemble.yml
-kubectl delete -f preprocessing.yml
+kubectl delete -f EfficientNetB0.yaml
+kubectl delete -f MobileNetV2.yaml
+kubectl delete -f ensemble.yaml
+kubectl delete -f preprocessing.yaml

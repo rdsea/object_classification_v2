@@ -23,7 +23,7 @@ spec:
       containers:
         - name: mobilenetv2
           imagePullPolicy: "IfNotPresent"
-          image: rdsea/inference:cpu
+          image: rdsea/inference:gpu
           ports:
             - containerPort: 5012
           args: ["--model", "MobileNetV2"]
@@ -31,14 +31,7 @@ spec:
             - name: MANUAL_TRACING
               value: "true"
             - name: OTEL_ENDPOINT
-              value: "http://jaeger-collector.observe.svc.cluster.local:4318/v1/traces"
-          resources:
-            requests:
-              cpu: "2000m"
-              memory: "512Mi"
-            limits:
-              cpu: "2000m"
-              memory: "1024Mi"
+              value: "http://spm-metrics-source.default:4318/v1/traces"
 ---
 apiVersion: v1
 kind: Service
@@ -50,23 +43,3 @@ spec:
       targetPort: 5012
   selector:
     app: mobilenetv2
-
----
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: mobilenetv2-hpa
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: mobilenetv2
-  minReplicas: 1
-  maxReplicas: 5
-  metrics:
-    - type: Resource
-      resource:
-        name: cpu
-        target:
-          type: Utilization
-          averageUtilization: 70

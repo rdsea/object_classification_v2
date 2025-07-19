@@ -2,63 +2,65 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: preprocessing
+  name: efficientnetb0
   labels:
-    app: preprocessing
+    app: efficientnetb0
     version: v1
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: preprocessing
+      app: efficientnetb0
       version: v1
   template:
     metadata:
       labels:
-        app: preprocessing
+        app: efficientnetb0
         version: v1
       annotations:
         sidecar.istio.io/inject: "true"
     spec:
       containers:
-        - name: preprocessing
+        - name: efficientnetb0
           imagePullPolicy: "IfNotPresent"
-          image: rdsea/preprocessing
+          image: rdsea/inference:cpu
           ports:
-            - containerPort: 5010
+            - containerPort: 5012
+          args: ["--model", "EfficientNetB0"]
           env:
             - name: MANUAL_TRACING
               value: "true"
             - name: OTEL_ENDPOINT
-              value: "http://jaeger-collector.observe.svc.cluster.local:4318/v1/traces"
+              value: http://spm-metrics-source.default:4318/v1/traces
           resources:
             requests:
-              cpu: "500m"
+              cpu: "2000m"
               memory: "512Mi"
             limits:
-              cpu: "500m"
-              memory: "512Mi"
+              cpu: "2000m"
+              memory: "1024Mi"
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: preprocessing-service
+  name: efficientnetb0-service
 spec:
   ports:
-    - port: 5010
-      targetPort: 5010
+    - port: 5012
+      targetPort: 5012
   selector:
-    app: preprocessing
+    app: efficientnetb0
+
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: preprocessing-hpa
+  name: efficientnetb0-hpa
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: preprocessing
+    name: efficientnetb0
   minReplicas: 1
   maxReplicas: 5
   metrics:

@@ -30,7 +30,7 @@ spec:
             - name: MANUAL_TRACING
               value: "true"
             - name: OTEL_ENDPOINT
-              value: "http://jaeger-collector.observe.svc.cluster.local:4318/v1/traces"
+              value: "http://spm-metrics-source.default:4318/v1/traces"
             - name: SEND_TO_QUEUE
               value: "false"
           resources:
