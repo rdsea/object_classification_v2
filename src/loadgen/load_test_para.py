@@ -81,3 +81,6 @@ def add_custom_arguments(parser):
         default="drone_1",
         help="Device ID to send with each request",
     )
+
+
+events.init_command_line_parser.add_listener(add_custom_arguments)
