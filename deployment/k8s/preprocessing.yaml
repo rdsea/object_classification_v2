@@ -30,7 +30,7 @@ spec:
             - name: MANUAL_TRACING
               value: "true"
             - name: OTEL_ENDPOINT
-              value: "http://my-opentelemetry-collector.default:4318/v1/traces"
+              value: "http://my-opentelemetry-collector.observe:4318/v1/traces"
           resources:
             requests:
               cpu: "500m"
