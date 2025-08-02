@@ -7,7 +7,6 @@ import time
 from multiprocessing import Process, current_process
 
 import aio_pika
-import yaml
 from motor.motor_asyncio import AsyncIOMotorClient
 
 MAX_RETRIES = 10
@@ -15,22 +14,18 @@ INITIAL_DELAY = 2
 MAX_DELAY = 60
 NUM_PROCESSES = 4
 
-# Load config once
-with open("config.yaml") as f:
-    ml_consumer_config = yaml.safe_load(f)
+# RabbitMQ configuration
+RABBITMQ_USERNAME = os.getenv("RABBITMQ_USERNAME", "default_username")
+RABBITMQ_PASSWORD = os.getenv("RABBITMQ_PASSWORD", "default_password")
+RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "rabbitmq")
+RABBITMQ_URL = f"amqp://{RABBITMQ_USERNAME}:{RABBITMQ_PASSWORD}@{RABBITMQ_HOST}"
+QUEUE_NAME = os.getenv("RABBITMQ_QUEUE_NAME", "object_detection_result")
 
-
-def get_rabbitmq_connection_url(config):
-    return f"amqp://{config['rabbitmq']['username']}:{config['rabbitmq']['password']}@{config['rabbitmq']['url']}"
-
-
-def get_mongodb_connection_url(config):
-    return f"mongodb://{config['mongodb']['username']}:{config['mongodb']['password']}@{config['mongodb']['url']}"
-
-
-RABBITMQ_URL = get_rabbitmq_connection_url(ml_consumer_config)
-QUEUE_NAME = ml_consumer_config["rabbitmq"]["queue_name"]
-MONGODB_URI = get_mongodb_connection_url(ml_consumer_config)
+# MongoDB configuration
+MONGODB_USERNAME = os.getenv("MONGODB_USERNAME", "default_username")
+MONGODB_PASSWORD = os.getenv("MONGODB_PASSWORD", "default_password")
+MONGODB_HOST = os.getenv("MONGODB_HOST", "mongodb")
+MONGODB_URI = f"mongodb://{MONGODB_USERNAME}:{MONGODB_PASSWORD}@{MONGODB_HOST}"
 DB_NAME = "object-detection"
 COLLECTION_NAME = "results"
 

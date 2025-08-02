@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ml-consumer
+  labels:
+    app: ml-consumer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ml-consumer
+  template:
+    metadata:
+      labels:
+        app: ml-consumer
+    spec:
+      containers:
+        - name: ml-consumer
+          image: rdsea/ml_consumer:v1
+          env:
+            - name: RABBITMQ_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-secret
+                  key: username
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-secret
+                  key: password
+            - name: RABBITMQ_HOST
+              value: "rabbitmq" # Or your RabbitMQ service name in Kubernetes
+            - name: RABBITMQ_QUEUE_NAME
+              value: "object_detection_result"
+
+            - name: MONGODB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-secret
+                  key: username
+            - name: MONGODB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-secret
+                  key: password
+            - name: MONGODB_HOST
+              value: "mongodb-svc.mongodb" # Or your MongoDB service name in Kubernetes
+            - name: MANUAL_TRACING
+              value: "true"
+            - name: OTEL_ENDPOINT
+              value: "http://my-opentelemetry-collector.observe:4318/v1/traces" # Replace with your OpenTelemetry collector endpoint
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rabbitmq-secret
+type: Opaque
+data:
+  # username:  kubectl get secret rabbit-cluster-default-user -o jsonpath="{.data.username}" | base64 --decode
+  # password: kubectl get secret rabbit-cluster-default-user -o jsonpath="{.data.password}" | base64 --decode
+  username: Z3Vlc3Q= # echo -n 'guest' | base64
+  password: Z3Vlc3Q= # echo -n 'guest' | base64
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mongodb-secret
+type: Opaque
+data:
+  username: cm9vdA== # echo -n 'root' | base64
+  password: ZXhhbXBsZQ== # echo -n 'example' | base64

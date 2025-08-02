@@ -1,0 +1,12 @@
+apiVersion: rabbitmq.com/v1beta1
+kind: RabbitmqCluster
+metadata:
+  name: rabbitmq
+  namespace: default
+spec:
+  replicas: 1
+  rabbitmq:
+    additionalConfig: |
+      default_user = admin
+      default_pass = adminadminadmin
+

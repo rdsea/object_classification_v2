@@ -2,7 +2,6 @@ FROM debian:stable-slim
 
 WORKDIR /ml_consumer
 
-
 COPY --from=ghcr.io/astral-sh/uv:0.4.3 /uv /bin/uv
 
 COPY ./*.toml ./
