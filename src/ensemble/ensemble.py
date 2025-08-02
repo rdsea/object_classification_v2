@@ -77,10 +77,12 @@ def get_inference_service_url_openziti(ensemble_chosen: list[str]):
     ]
 
 
-def get_rabbitmq_connection_url(config: dict):
-    rabbitmq_url = config["rabbitmq"]["url"]  # Example config
-    username = config["rabbitmq"]["username"]
-    password = config["rabbitmq"]["password"]
+def get_rabbitmq_connection_url():
+    rabbitmq_url = os.environ.get("RABBITMQ_URL")
+    username = os.environ.get("RABBITMQ_USERNAME")
+    password = os.environ.get("RABBITMQ_PASSWORD")
+    if not all([rabbitmq_url, username, password]):
+        raise ValueError("RabbitMQ environment variables are not set")
     return f"amqp://{username}:{password}@{rabbitmq_url}"
 
 
@@ -91,7 +93,7 @@ if os.environ.get("DOCKER"):
 if os.environ.get("OPENZITI"):
     INFERENCE_SERVICE_URLS = get_inference_service_url_openziti(config["ensemble"])
 
-RABBITMQ_URL = get_rabbitmq_connection_url(config)
+RABBITMQ_URL = get_rabbitmq_connection_url()
 
 
 @asynccontextmanager
@@ -99,7 +101,9 @@ async def lifespan(app: FastAPI):
     if SEND_TO_QUEUE:
         connection = await aio_pika.connect_robust(RABBITMQ_URL)
         channel = await connection.channel()
-        queue_name = app.state.config["rabbitmq"]["queue_name"]
+        queue_name = os.environ.get("RABBITMQ_QUEUE_NAME")
+        if not queue_name:
+            raise ValueError("RABBITMQ_QUEUE_NAME environment variable is not set")
         await channel.declare_queue(queue_name, durable=True)
 
         app.state.rabbitmq_connection = connection
@@ -153,10 +157,11 @@ async def process_image_task(
         final_result["Timestamp"] = timestamp
         logging.info(f"Ensembled result: {final_result}")
 
-        queue_name = app.state.config["rabbitmq"]["queue_name"]
         if SEND_TO_QUEUE:
             channel = app.state.rabbitmq_channel
-            queue_name = app.state.config["rabbitmq"]["queue_name"]
+            queue_name = os.environ.get("RABBITMQ_QUEUE_NAME")
+            if not queue_name:
+                raise ValueError("RABBITMQ_QUEUE_NAME environment variable is not set")
             message_body = json.dumps(final_result).encode()
             message = aio_pika.Message(body=message_body)
             await channel.default_exchange.publish(message, routing_key=queue_name)
