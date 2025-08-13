@@ -20,10 +20,12 @@ spec:
       annotations:
         sidecar.istio.io/inject: "true"
     spec:
+      nodeSelector:
+        node-role.kubernetes.io/worker: "true"
       containers:
         - name: mobilenetv2
           imagePullPolicy: "IfNotPresent"
-          image: rdsea/inference:gpu
+          image: rdsea/inference:cpu
           ports:
             - containerPort: 5012
           args: ["--model", "MobileNetV2"]
@@ -32,6 +34,13 @@ spec:
               value: "true"
             - name: OTEL_ENDPOINT
               value: "http://my-opentelemetry-collector.observe:4318/v1/traces"
+          resources:
+            requests:
+              cpu: "1500m"
+              memory: "200Mi"
+            limits:
+              cpu: "2000m"
+              memory: "256Mi"
 ---
 apiVersion: v1
 kind: Service

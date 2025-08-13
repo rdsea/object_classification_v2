@@ -5,27 +5,107 @@ metadata:
 spec:
   gatewayClassName: cilium
   listeners:
-    - protocol: HTTP
+    - name: web-gw
+      protocol: HTTP
       port: 80
-      name: web-gw
       allowedRoutes:
         namespaces:
           from: All
----
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: rabbitmq-route
-spec:
-  parentRefs:
-    - name: cloud-gateway
-      namespace: default
-  rules:
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /
-      backendRefs:
-        - kind: Service
-          name: rabbitmq
-          port: 5672
+    - name: amqp
+      protocol: TCP
+      port: 5672
+      allowedRoutes:
+        namespaces:
+          from: All
+# ---
+# apiVersion: gateway.networking.k8s.io/v1alpha2
+# kind: TCPRoute
+# metadata:
+#   name: rabbitmq-tcp-route
+# spec:
+#   parentRefs:
+#     - name: cloud-gateway
+#       namespace: default
+#       sectionName: amqp
+#   rules:
+#     - backendRefs:
+#         - name: rabbitmq
+#           port: 5672
+#
+# ---
+# apiVersion: gateway.networking.k8s.io/v1
+# kind: HTTPRoute
+# metadata:
+#   name: jaeger-route
+#   namespace: observe
+# spec:
+#   parentRefs:
+#     - name: cloud-gateway
+#       namespace: default
+#   rules:
+#     - matches:
+#         - path:
+#             type: PathPrefix
+#             value: /jaeger
+#       backendRefs:
+#         - kind: Service
+#           name: jaeger-query
+#           port: 80
+# ---
+# apiVersion: gateway.networking.k8s.io/v1
+# kind: HTTPRoute
+# metadata:
+#   name: grafana-route
+#   namespace: dashboard
+# spec:
+#   parentRefs:
+#     - name: cloud-gateway
+#       namespace: default
+#   rules:
+#     - matches:
+#         - path:
+#             type: PathPrefix
+#             value: /grafana
+#       backendRefs:
+#         - kind: Service
+#           name: prometheus-grafana
+#           port: 80
+# ---
+# apiVersion: gateway.networking.k8s.io/v1
+# kind: HTTPRoute
+# metadata:
+#   name: prometheus-route
+#   namespace: observe
+# spec:
+#   parentRefs:
+#     - name: cloud-gateway
+#       namespace: default
+#   rules:
+#     - matches:
+#         - path:
+#             type: PathPrefix
+#             value: /prometheus
+#       backendRefs:
+#         - kind: Service
+#           name: prometheus-kube-prometheus-prometheus
+#           port: 9090
+#
+# ---
+# apiVersion: gateway.networking.k8s.io/v1
+# kind: HTTPRoute
+# metadata:
+#   name: hubble-route
+#   namespace: kube-system
+# spec:
+#   parentRefs:
+#     - name: cloud-gateway
+#       namespace: default
+#   rules:
+#     - matches:
+#         - path:
+#             type: PathPrefix
+#             value: /hubble/
+#       backendRefs:
+#         - kind: Service
+#           name: hubble-ui
+#           port: 80
