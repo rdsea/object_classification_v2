@@ -4,15 +4,18 @@ import logging
 import os
 import sys
 import time
+import uuid
+import datetime
 from multiprocessing import Process, current_process
 
 import aio_pika
-from motor.motor_asyncio import AsyncIOMotorClient
+from cassandra.cluster import Cluster
+from cassandra.query import SimpleStatement
 
 MAX_RETRIES = 10
 INITIAL_DELAY = 2
 MAX_DELAY = 60
-NUM_PROCESSES = 4
+NUM_PROCESSES = 1
 
 # RabbitMQ configuration
 RABBITMQ_USERNAME = os.getenv("RABBITMQ_USERNAME", "default_username")
@@ -21,13 +24,13 @@ RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "rabbitmq")
 RABBITMQ_URL = f"amqp://{RABBITMQ_USERNAME}:{RABBITMQ_PASSWORD}@{RABBITMQ_HOST}"
 QUEUE_NAME = os.getenv("RABBITMQ_QUEUE_NAME", "object_detection_result")
 
-# MongoDB configuration
-MONGODB_USERNAME = os.getenv("MONGODB_USERNAME", "default_username")
-MONGODB_PASSWORD = os.getenv("MONGODB_PASSWORD", "default_password")
-MONGODB_HOST = os.getenv("MONGODB_HOST", "mongodb")
-MONGODB_URI = f"mongodb://{MONGODB_USERNAME}:{MONGODB_PASSWORD}@{MONGODB_HOST}"
-DB_NAME = "object-detection"
-COLLECTION_NAME = "results"
+# ScyllaDB configuration
+SCYLLA_USERNAME = os.getenv("SCYLLA_USERNAME", "default_username")
+SCYLLA_PASSWORD = os.getenv("SCYLLA_PASSWORD", "default_password")
+SCYLLA_HOST = os.getenv("SCYLLA_HOST", "scylla")
+SCYLLA_PORT = int(os.getenv("SCYLLA_PORT", 9042))
+KEYSPACE = "object_detection"
+TABLE_NAME = "results"
 
 logging.basicConfig(level=logging.INFO)
 
@@ -36,8 +39,6 @@ if os.environ.get("MANUAL_TRACING"):
     from opentelemetry import trace
     from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
     from opentelemetry.instrumentation.aio_pika import AioPikaInstrumentor
-
-    # from opentelemetry.instrumentation.motor import MotorInstrumentor
     from opentelemetry.sdk.resources import SERVICE_NAME, Resource
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
@@ -47,7 +48,6 @@ if os.environ.get("MANUAL_TRACING"):
         raise Exception("OTEL_ENDPOINT env variable is required for manual tracing")
 
     AioPikaInstrumentor().instrument()
-    # MotorInstrumentor().instrument()
 
     trace_provider = TracerProvider(
         resource=Resource.create({SERVICE_NAME: "ml-consumer"})
@@ -56,18 +56,44 @@ if os.environ.get("MANUAL_TRACING"):
         BatchSpanProcessor(OTLPSpanExporter(endpoint=span_processor_endpoint))
     )
     trace.set_tracer_provider(trace_provider)
-
     tracer = trace.get_tracer(__name__)
 else:
-    tracer = None  # Fallback if tracing is not enabled
+    tracer = None
 
 
-async def process_message(message: aio_pika.IncomingMessage, collection):
+async def process_message(message: aio_pika.IncomingMessage, session):
+    def bridge_future(response_future, loop):
+        future = loop.create_future()
+
+        def on_success(result):
+            loop.call_soon_threadsafe(future.set_result, result)
+
+        def on_error(ex):
+            loop.call_soon_threadsafe(future.set_exception, ex)
+
+        response_future.add_callback(on_success)
+        response_future.add_errback(on_error)
+
+        return future
+
     async with message.process():
         try:
             body = message.body.decode()
             data = json.loads(body)
-            data["Endtime"] = time.time()
+            data["endtime"] = time.time()
+            request_id = uuid.UUID(data.get("request_id", str(uuid.uuid4())))
+            prediction_result = data["prediction"][0]
+            timestamp = data.get("timestamp", time.time())
+            dt_object = datetime.datetime.fromtimestamp(float(timestamp))
+
+            query = f"""
+                INSERT INTO {KEYSPACE}.{TABLE_NAME} (id, timestamp, prediction, confidence)
+                VALUES (%s, %s, %s, %s)
+            """
+            values = (request_id, dt_object, prediction_result[0], prediction_result[1])
+
+            loop = asyncio.get_running_loop()
+            response_future = session.execute_async(SimpleStatement(query), values)
 
             if tracer:
                 with tracer.start_as_current_span("process_message") as span:
@@ -78,25 +104,20 @@ async def process_message(message: aio_pika.IncomingMessage, collection):
                     span.set_attribute(
                         "rabbitmq.routing_key", message.routing_key or "unknown"
                     )
-                    span.set_attribute(
-                        "document.timestamp", data.get("Timestamp", "unknown")
-                    )
-
                     logging.info(f"{current_process().name} received: {data}")
-                    result = await collection.insert_one(data)
+                    await bridge_future(response_future, loop)
                     logging.info(
-                        f"{current_process().name} inserted ID: {result.inserted_id}"
+                        f"{current_process().name} inserted request_id: {request_id}"
                     )
-                    span.set_attribute("mongodb.inserted_id", str(result.inserted_id))
             else:
                 logging.info(f"{current_process().name} received: {data}")
-                result = await collection.insert_one(data)
+                await bridge_future(response_future, loop)
                 logging.info(
-                    f"{current_process().name} inserted ID: {result.inserted_id}"
+                    f"{current_process().name} inserted request_id: {request_id}"
                 )
 
         except Exception as e:
-            logging.error(f"Error: {e}")
+            logging.exception(f"Error: {e}")
             if tracer:
                 span.record_exception(e)
 
@@ -110,8 +131,8 @@ async def consume():
 
 
 async def _consume_logic(span):
-    mongo_client = AsyncIOMotorClient(MONGODB_URI)
-    collection = mongo_client[DB_NAME][COLLECTION_NAME]
+    cluster = Cluster([SCYLLA_HOST], port=SCYLLA_PORT)
+    session = cluster.connect()
 
     retries = 0
     delay = INITIAL_DELAY
@@ -135,7 +156,7 @@ async def _consume_logic(span):
         channel = await connection.channel()
         queue = await channel.declare_queue(QUEUE_NAME, durable=True)
         logging.info(f"{current_process().name} consuming from queue: {QUEUE_NAME}")
-        await queue.consume(lambda msg: process_message(msg, collection))
+        await queue.consume(lambda msg: process_message(msg, session))
         await asyncio.Future()  # Keep running
 
 
