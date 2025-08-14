@@ -15,7 +15,7 @@ from cassandra.query import SimpleStatement
 MAX_RETRIES = 10
 INITIAL_DELAY = 2
 MAX_DELAY = 60
-NUM_PROCESSES = 1
+NUM_PROCESSES = int(os.getenv("NUM_PROCESSES", "1"))
 
 # RabbitMQ configuration
 RABBITMQ_USERNAME = os.getenv("RABBITMQ_USERNAME", "default_username")

@@ -16,35 +16,20 @@ spec:
     spec:
       containers:
         - name: ml-consumer
-          image: rdsea/ml_consumer:v1
+          image: rdsea/ml_consumer:v3
           env:
+            - name: NUM_PROCESSES
+              value: "3"
             - name: RABBITMQ_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: rabbitmq-secret
-                  key: username
+              value: admin
             - name: RABBITMQ_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: rabbitmq-secret
-                  key: password
+              value: adminadminadmin
             - name: RABBITMQ_HOST
               value: "rabbitmq" # Or your RabbitMQ service name in Kubernetes
             - name: RABBITMQ_QUEUE_NAME
               value: "object_detection_result"
-
-            - name: MONGODB_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: mongodb-secret
-                  key: username
-            - name: MONGODB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: mongodb-secret
-                  key: password
-            - name: MONGODB_HOST
-              value: "mongodb-svc.mongodb" # Or your MongoDB service name in Kubernetes
+            - name: SCYLLA_HOST
+              value: "scylla"
             - name: MANUAL_TRACING
               value: "true"
             - name: OTEL_ENDPOINT
