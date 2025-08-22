@@ -12,6 +12,7 @@ util_directory = os.path.join(current_directory, "..", "util")
 sys.path.append(util_directory)
 
 from classes import IMAGENET2012_CLASSES  # noqa: E402
+
 from preprocessing import preprocess_input  # noqa: E402
 
 key_list = list(IMAGENET2012_CLASSES.keys())

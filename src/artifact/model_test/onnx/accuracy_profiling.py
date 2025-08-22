@@ -7,8 +7,9 @@ import numpy as np
 import onnxruntime as ort
 from classes import IMAGENET2012_CLASSES
 from PIL import Image
-from preprocessing import preprocess_input
 from tqdm import tqdm
+
+from preprocessing import preprocess_input
 
 MODEL_CONFIG = {
     "DenseNet121": [(1, 224, 224, 3), "torch"],

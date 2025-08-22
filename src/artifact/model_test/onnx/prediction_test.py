@@ -4,6 +4,7 @@ import os
 import numpy as np
 import onnxruntime as ort
 from PIL import Image
+
 from preprocessing import preprocess_input
 
 MODEL_CONFIG = {

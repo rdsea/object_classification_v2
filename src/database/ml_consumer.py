@@ -1,11 +1,11 @@
 import asyncio
+import datetime
 import json
 import logging
 import os
 import sys
 import time
 import uuid
-import datetime
 from multiprocessing import Process, current_process
 
 import aio_pika

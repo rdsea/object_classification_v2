@@ -3,17 +3,15 @@ import sys
 
 import cv2
 import numpy as np
-from pycoral.adapters import classify, common
-from pycoral.pybind._pywrap_coral import SetVerbosity as set_verbosity
-from pycoral.utils.edgetpu import make_interpreter
-
-
 from datamodel import (
     ImageClassificationModelEnum,
     ModelConfig,
 )
+from pycoral.adapters import classify, common
+from pycoral.pybind._pywrap_coral import SetVerbosity
+from pycoral.utils.edgetpu import make_interpreter
 
-set_verbosity(10)
+SetVerbosity(10)
 current_directory = os.path.dirname(os.path.abspath(__file__))
 util_directory = os.path.join(current_directory, "..", "util")
 sys.path.append(util_directory)
