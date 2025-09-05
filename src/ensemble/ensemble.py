@@ -93,12 +93,11 @@ if os.environ.get("DOCKER"):
 if os.environ.get("OPENZITI"):
     INFERENCE_SERVICE_URLS = get_inference_service_url_openziti(config["ensemble"])
 
-RABBITMQ_URL = get_rabbitmq_connection_url()
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if SEND_TO_QUEUE:
+        RABBITMQ_URL = get_rabbitmq_connection_url()
         connection = await aio_pika.connect_robust(RABBITMQ_URL)
         channel = await connection.channel()
         queue_name = os.environ.get("RABBITMQ_QUEUE_NAME")
