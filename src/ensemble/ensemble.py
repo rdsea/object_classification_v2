@@ -97,8 +97,8 @@ if os.environ.get("OPENZITI"):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if SEND_TO_QUEUE:
-        RABBITMQ_URL = get_rabbitmq_connection_url()
-        connection = await aio_pika.connect_robust(RABBITMQ_URL)
+        rabbitmq_url = get_rabbitmq_connection_url()
+        connection = await aio_pika.connect_robust(rabbitmq_url)
         channel = await connection.channel()
         queue_name = os.environ.get("RABBITMQ_QUEUE_NAME")
         if not queue_name:
