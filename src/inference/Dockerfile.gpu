@@ -1,5 +1,4 @@
-#NOTE: NEED TO BE BUILT ON JETSON!
-FROM nvcr.io/nvidia/l4t-tensorrt:r10.3.0-runtime
+FROM dustynv/onnxruntime:1.20.2-r36.4.0
 
 WORKDIR /object_classification
 
@@ -19,9 +18,9 @@ RUN uv python pin 3.10.18
 
 RUN uv sync --compile-bytecode --no-cache
 
-RUN wget https://pypi.jetson-ai-lab.dev/jp6/cu126/+f/869/e41abdc35e093/onnxruntime_gpu-1.22.0-cp310-cp310-linux_aarch64.whl#sha256=869e41abdc35e09345876f047fce49267d699df3e44b67c2518b0469739484ff
+RUN wget https://pypi.jetson-ai-lab.io/jp6/cu126/+f/e1e/9e3dc2f4d5551/onnxruntime_gpu-1.23.0-cp310-cp310-linux_aarch64.whl#sha256=e1e9e3dc2f4d5551c5f0b5554cf490d141cd0d339a5a7f4826ac0e04f20a35fc
 
-RUN uv pip install ./onnxruntime_gpu-1.22.0-cp310-cp310-linux_aarch64.whl
+RUN uv pip install ./onnxruntime_gpu-1.23.0-cp310-cp310-linux_aarch64.whl
 
 COPY ./inference/*.py ./inference/
 
@@ -32,5 +31,7 @@ COPY ./util/ ./util
 EXPOSE 8050-8065
 
 WORKDIR /object_classification/inference
+
+ENV PATH="/object_classification/.venv/bin:$PATH"
 
 ENTRYPOINT [ "./run_server.sh" ]
