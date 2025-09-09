@@ -19,7 +19,6 @@ services:
       OTEL_ENDPOINT: "http://jaeger:4318/v1/traces"
       cpus: 0.5
 
-
   ensemble:
     image: rdsea/ensemble
     build:
@@ -52,6 +51,22 @@ services:
       MANUAL_TRACING: true
       OTEL_ENDPOINT: "http://jaeger:4318/v1/traces"
     cpus: 2
+
+  llava-service:
+    image: hongtringuyen/llm_service
+    build:
+      context: ./llm_service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - 5012:5012
+    environment:
+      OLLAMA_HOST: "http://host.docker.internal:11435"
+      LLM_MODEL: "llava:latest"
+      MANUAL_TRACING: true
+      OTEL_ENDPOINT: "http://jaeger:4318/v1/traces"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   # jaeger:
   #   image: jaegertracing/all-in-one:1.56
