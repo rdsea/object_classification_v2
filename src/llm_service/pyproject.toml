@@ -1,0 +1,17 @@
+[project]
+name = "llm_service"
+version = "0.0.1"
+description = "LLM service"
+requires-python = ">=3.10,<3.11"
+
+dependencies = [
+  "fastapi>=0.95",
+  "uvicorn[standard]>=0.22",
+  "python-dotenv>=1.0.1",
+  "ollama>=0.1.7",
+  "Pillow>=10.2.0"
+]
+
+[build-system]
+requires = ["setuptools>=61.0","wheel"]
+build-backend = "setuptools.build_meta"
