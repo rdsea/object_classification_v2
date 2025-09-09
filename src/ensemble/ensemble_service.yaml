@@ -9,3 +9,4 @@ aggregating:
 ensemble:
   - MobileNetV2
   - EfficientNetB0
+  - llava
