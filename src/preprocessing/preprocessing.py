@@ -124,7 +124,22 @@ async def processing_image(file: UploadFile, request: Request):
     start_time = time.time()
 
     logging.info(f"{(time.time() - start_time) * 1000}")
-    image_bytes = processed_image.tobytes()
+
+    # image_bytes = processed_image.tobytes()
+    #
+    success, buffer = cv2.imencode(
+        ".jpg", cv2.cvtColor(processed_image, cv2.COLOR_RGB2BGR)
+    )
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to encode image")
+    image_bytes = buffer.tobytes()
+
+    headers = {
+        "Timestamp": request.headers.get("Timestamp"),
+        "Content-Type": "image/jpeg",
+        "Content-Length": str(len(image_bytes)),
+    }
+
     request_id = str(uuid4())
 
     headers = {
