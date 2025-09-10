@@ -58,11 +58,11 @@ services:
       context: ./llm_service
       dockerfile: Dockerfile
     restart: unless-stopped
-    ports:
-      - 5012:5012
+    # ports:
+    #   - 5012:5012
     environment:
       OLLAMA_HOST: "http://host.docker.internal:11435"
-      LLM_MODEL: "llava:latest"
+      LLM_MODEL: "llava:7b"
       MANUAL_TRACING: true
       OTEL_ENDPOINT: "http://jaeger:4318/v1/traces"
     extra_hosts:
