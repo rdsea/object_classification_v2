@@ -9,7 +9,8 @@ dependencies = [
   "uvicorn[standard]>=0.22",
   "python-dotenv>=1.0.1",
   "ollama>=0.1.7",
-  "Pillow>=10.2.0"
+  "Pillow>=10.2.0",
+  "python-multipart",
 ]
 
 [build-system]
