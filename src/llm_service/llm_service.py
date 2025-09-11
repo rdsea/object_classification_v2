@@ -12,7 +12,7 @@ from ollama import AsyncClient
 # from email.policy import default as email_policy
 import re
 
-chosen_model = os.environ["CHOSEN_MODEL"]
+LLM_MODEL = os.getenv("LLM_MODEL", "llava:7b")
 if os.environ.get("MANUAL_TRACING"):
     span_processor_endpoint = os.environ.get("OTEL_ENDPOINT")
     if span_processor_endpoint is None:
@@ -34,9 +34,7 @@ if os.environ.get("MANUAL_TRACING"):
     LangchainInstrumentor().instrument()
 
     # Service name is required for most backends
-    resource = Resource(
-        attributes={SERVICE_NAME: f"LLM inference-{chosen_model.lower()}"}
-    )
+    resource = Resource(attributes={SERVICE_NAME: f"LLM inference-{LLM_MODEL.lower()}"})
 
     trace_provider = TracerProvider(resource=resource)
     processor = BatchSpanProcessor(OTLPSpanExporter(endpoint=span_processor_endpoint))
@@ -54,7 +52,7 @@ app = FastAPI()
 ollama_host = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")
 if not ollama_host.startswith("http://") and not ollama_host.startswith("https://"):
     ollama_host = "http://" + ollama_host
-LLM_MODEL = os.getenv("LLM_MODEL", "llava:7b")
+# LLM_MODEL = os.getenv("LLM_MODEL", "llava:7b")
 
 # create a single AsyncClient for reuse
 client = AsyncClient(host=ollama_host)
