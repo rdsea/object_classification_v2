@@ -1,4 +1,6 @@
-FROM debian:stable-slim
+#FROM debian:stable-slim
+
+FROM rdsea/debian-slim-opencv:latest
 
 WORKDIR /ensemble
 
