@@ -1,17 +1,23 @@
-# llm_service.py
 import os
+import asyncio
 import base64
 import hashlib
 import logging
-from dotenv import load_dotenv
+import aiohttp
+
+# from dotenv import load_dotenv
 from fastapi import FastAPI, Request, HTTPException, UploadFile, File
 from typing import Optional, Tuple
 from ollama import AsyncClient
+
+import openlit
 
 # from email.parser import BytesParser
 # from email.policy import default as email_policy
 import re
 
+MAX_IMAGE_SIZE = int(os.getenv("MAX_IMAGE_SIZE", 10 * 1024 * 1024))  # 10 MiB default
+MODEL_CALL_TIMEOUT = int(os.getenv("MODEL_CALL_TIMEOUT", 60))  # seconds
 LLM_MODEL = os.getenv("LLM_MODEL", "llava:7b")
 if os.environ.get("MANUAL_TRACING"):
     span_processor_endpoint = os.environ.get("OTEL_ENDPOINT")
@@ -21,29 +27,43 @@ if os.environ.get("MANUAL_TRACING"):
     from opentelemetry import trace
     from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 
-    from opentelemetry.instrumentation.requests import RequestsInstrumentor
-    from opentelemetry.instrumentation.langchain import LangchainInstrumentor
+    # from opentelemetry.instrumentation.requests import RequestsInstrumentor
+    # from opentelemetry.instrumentation.langchain import LangchainInstrumentor
 
     # from opentelemetry.sdk.metrics import MeterProvider
     # from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+    from opentelemetry.instrumentation.aiohttp_client import AioHttpClientInstrumentor
+    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
     from opentelemetry.sdk.resources import SERVICE_NAME, Resource
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
-    RequestsInstrumentor().instrument()
-    LangchainInstrumentor().instrument()
-
-    # Service name is required for most backends
-    resource = Resource(attributes={SERVICE_NAME: f"LLM inference-{LLM_MODEL.lower()}"})
-
+    #
+    # RequestsInstrumentor().instrument()
+    # LangchainInstrumentor().instrument()
+    #
+    #
+    # # Service name is required for most backends
+    resource = Resource(attributes={SERVICE_NAME: f"inference-{LLM_MODEL.lower()}"})
+    #
     trace_provider = TracerProvider(resource=resource)
     processor = BatchSpanProcessor(OTLPSpanExporter(endpoint=span_processor_endpoint))
     trace_provider.add_span_processor(processor)
     trace.set_tracer_provider(trace_provider)
-
+    #
     tracer = trace.get_tracer(__name__)
+    openlit.init(
+        tracer=tracer,  # use your configured tracer/provider
+        # optionally also pass otlp_endpoint or other args, but tracer is primary
+        otlp_endpoint=span_processor_endpoint,
+    )
 
-load_dotenv()
+    # openlit.init(
+    #     service_name=f"inference-{LLM_MODEL.lower()}",
+    #     environment="production",
+    #     otlp_endpoint=span_processor_endpoint,
+    # )
+# load_dotenv()
 logging.basicConfig(level=logging.INFO)
 
 app = FastAPI()
@@ -241,15 +261,16 @@ async def _extract_image_bytes(
 @app.post("/inference")
 async def inference(request: Request, file: Optional[UploadFile] = File(None)):
     """
-    Accepts:
-      - multipart form (field 'file' or any file field)
-      - raw binary body (curl --data-binary @image.jpg)
-      - JSON {"image": "<base64>"}
-      - also works if the body is a raw multipart envelope (ensemble forwarding)
+    Accepts multipart, raw binary, or JSON+base64 images.
+    Tries to call client.chat, falls back to client.generate, and tries base64 if bytes fail.
     """
     image_bytes, content_type = await _extract_image_bytes(request, file)
 
-    # debug: save a local copy so you can compare with what ensemble forwarded
+    # 1) size guard
+    if len(image_bytes) > MAX_IMAGE_SIZE:
+        raise HTTPException(status_code=413, detail="Image too large")
+
+    # debug: save a local copy (optional)
     sha = await _sha256_hex(image_bytes)
     tmp_path = f"/tmp/llm_in_{sha[:8]}.bin"
     try:
@@ -262,31 +283,52 @@ async def inference(request: Request, file: Optional[UploadFile] = File(None)):
             content_type,
         )
     except Exception as e:
-        logging.warning("Failed to write debug file: %s", e)
+        logging.debug("Failed to write debug file: %s", e)
 
-    # Build message-level format (same as your working chat example)
-    messages = [
-        {
-            "role": "user",
-            "content": "What is in the image?",
-            "images": [image_bytes],
-        }
-    ]
+    # 2) prepare a user message with image
+    prompt = "What is in the image?"
+    messages_bytes = [{"role": "user", "content": prompt, "images": [image_bytes]}]
 
-    # Prefer client's chat() if available, otherwise pass messages to generate()
+    async def try_model_call(messages):
+        """Try chat then generate with provided messages (caller supplies images as bytes or base64)."""
+        # Prefer chat if available
+        try:
+            return await asyncio.wait_for(
+                client.chat(model=LLM_MODEL, messages=messages, stream=False),
+                timeout=MODEL_CALL_TIMEOUT,
+            )
+        except AttributeError:
+            # client has no chat() API — fall back to generate()
+            return await asyncio.wait_for(
+                client.generate(model=LLM_MODEL, messages=messages, stream=False),
+                timeout=MODEL_CALL_TIMEOUT,
+            )
+
+    # 3) call model (try with raw bytes first; on failure try base64)
+    response = None
+    model_errors = []
     try:
-        # many AsyncClient implementations provide chat()
-        response = await client.chat(model=LLM_MODEL, messages=messages, stream=False)
-    except AttributeError:
-        # fallback: some clients expose generate(messages=...)
-        response = await client.generate(
-            model=LLM_MODEL, messages=messages, stream=False
-        )
+        response = await try_model_call(messages_bytes)
     except Exception as e:
-        logging.exception("Ollama client error:")
-        raise HTTPException(status_code=500, detail=f"Ollama error: {e}")
+        logging.info(
+            "Model call with raw bytes failed, will try base64 fallback: %s", e
+        )
+        model_errors.append(("bytes", e))
 
-    # Extract text content robustly (handle a few common response shapes)
+        # # try base64-encoding the image (some client versions/platforms require base64)
+        # try:
+        #     b64 = base64.b64encode(image_bytes).decode("ascii")
+        #     messages_b64 = [{"role": "user", "content": prompt, "images": [b64]}]
+        #     response = await try_model_call(messages_b64)
+        # except Exception as e2:
+        #     logging.exception("Model base64 fallback also failed")
+        #     model_errors.append(("base64", e2))
+        #     # nothing else to try
+        #     raise HTTPException(
+        #         status_code=500, detail=f"Model call failed: {model_errors}"
+        #     )
+
+    # 4) robustly extract text from response (your existing logic)
     content = None
     try:
         if hasattr(response, "message") and getattr(response.message, "content", None):
@@ -326,6 +368,100 @@ async def inference(request: Request, file: Optional[UploadFile] = File(None)):
 
     return {"response": content, "sha256": sha}
 
+
+if os.environ.get("MANUAL_TRACING"):
+    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+    FastAPIInstrumentor.instrument_app(app, exclude_spans=["send", "receive"])
+
+# @app.post("/inference")
+# async def inference(request: Request, file: Optional[UploadFile] = File(None)):
+#     """
+#     Accepts:
+#       - multipart form (field 'file' or any file field)
+#       - raw binary body (curl --data-binary @image.jpg)
+#       - JSON {"image": "<base64>"}
+#       - also works if the body is a raw multipart envelope (ensemble forwarding)
+#     """
+#     image_bytes, content_type = await _extract_image_bytes(request, file)
+#
+#     # debug: save a local copy so you can compare with what ensemble forwarded
+#     sha = await _sha256_hex(image_bytes)
+#     tmp_path = f"/tmp/llm_in_{sha[:8]}.bin"
+#     try:
+#         with open(tmp_path, "wb") as wf:
+#             wf.write(image_bytes)
+#         logging.info(
+#             "Saved incoming bytes to %s size=%d ct=%s",
+#             tmp_path,
+#             len(image_bytes),
+#             content_type,
+#         )
+#     except Exception as e:
+#         logging.warning("Failed to write debug file: %s", e)
+#
+#     # Build message-level format (same as your working chat example)
+#     messages = [
+#         {
+#             "role": "user",
+#             "content": "What is in the image?",
+#             "images": [image_bytes],
+#         }
+#     ]
+#
+#     # Prefer client's chat() if available, otherwise pass messages to generate()
+#     try:
+#         # many AsyncClient implementations provide chat()
+#         response = await client.chat(model=LLM_MODEL, messages=messages, stream=False)
+#     except AttributeError:
+#         # fallback: some clients expose generate(messages=...)
+#         response = await client.generate(
+#             model=LLM_MODEL, messages=messages, stream=False
+#         )
+#     except Exception as e:
+#         logging.exception("Ollama client error:")
+#         raise HTTPException(status_code=500, detail=f"Ollama error: {e}")
+#
+#     # Extract text content robustly (handle a few common response shapes)
+#     content = None
+#     try:
+#         if hasattr(response, "message") and getattr(response.message, "content", None):
+#             content = response.message.content
+#         elif isinstance(response, dict):
+#             if (
+#                 "message" in response
+#                 and isinstance(response["message"], dict)
+#                 and "content" in response["message"]
+#             ):
+#                 content = response["message"]["content"]
+#             elif "response" in response:
+#                 content = response["response"]
+#             elif (
+#                 "choices" in response
+#                 and isinstance(response["choices"], list)
+#                 and len(response["choices"]) > 0
+#             ):
+#                 first = response["choices"][0]
+#                 if isinstance(first, dict):
+#                     if (
+#                         "message" in first
+#                         and isinstance(first["message"], dict)
+#                         and "content" in first["message"]
+#                     ):
+#                         content = first["message"]["content"]
+#                     elif "text" in first:
+#                         content = first["text"]
+#                     else:
+#                         content = str(first)
+#                 else:
+#                     content = str(first)
+#         else:
+#             content = str(response)
+#     except Exception:
+#         content = str(response)
+#
+#     return {"response": content, "sha256": sha}
+#
 
 # import os
 #
