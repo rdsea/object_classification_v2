@@ -240,10 +240,10 @@ async def send_post_request(
 async def process_image_task(
     image_data: bytes, request_id: str, headers, timestamp: str
 ):
-    chosen_ensemble_function = getattr(
-        ensemble_function,
-        app.state.config["aggregating"]["aggregating_func"]["func_name"],
-    )
+    # chosen_ensemble_function = getattr(
+    #     ensemble_function,
+    #     app.state.config["aggregating"]["aggregating_func"]["func_name"],
+    # )
     logging.info(f"List service url: {INFERENCE_SERVICE_URLS}")
 
     if not INFERENCE_SERVICE_URLS:
@@ -289,8 +289,14 @@ async def process_image_task(
                 processed_results.append(r)
 
         # Run ensemble function on the results
-        final_result = chosen_ensemble_function(processed_results, request_id)
-        final_result["Timestamp"] = timestamp
+        # final_result = chosen_ensemble_function(processed_results, request_id)
+        # final_result = (processed_results, request_id)
+        # final_result["Timestamp"] = timestamp
+        final_result = {
+            "results": processed_results,
+            "request_id": request_id,
+            "timestamp": timestamp,
+        }
         logging.info(f"Ensembled result: {final_result}")
 
         if SEND_TO_QUEUE:
