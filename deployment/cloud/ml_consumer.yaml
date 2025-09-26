@@ -30,6 +30,8 @@ spec:
               value: "object_detection_result"
             - name: SCYLLA_HOST
               value: "scylla"
+            - name: SCYLLA_PORT
+              value: "9042"
             - name: MANUAL_TRACING
               value: "true"
             - name: OTEL_ENDPOINT
@@ -45,12 +47,3 @@ data:
   # password: kubectl get secret rabbit-cluster-default-user -o jsonpath="{.data.password}" | base64 --decode
   username: Z3Vlc3Q= # echo -n 'guest' | base64
   password: Z3Vlc3Q= # echo -n 'guest' | base64
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: mongodb-secret
-type: Opaque
-data:
-  username: cm9vdA== # echo -n 'root' | base64
-  password: ZXhhbXBsZQ== # echo -n 'example' | base64
