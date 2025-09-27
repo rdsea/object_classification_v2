@@ -38,13 +38,17 @@ jobs:
       - name: Check if ${{ matrix.image.dir }} changed
         id: changes
         run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Manual dispatch detected. Forcing build..."
+            echo "changed=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
           echo "Checking changes in ${{ matrix.image.dir }}..."
-          # Get the list of changed files between current and previous commit
           CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
           echo "Changed files:"
           echo "$CHANGED_FILES"
 
-          # Check if any changed file is under the relevant directory
           if echo "$CHANGED_FILES" | grep -q "^${{ matrix.image.dir }}/"; then
             echo "changed=true" >> $GITHUB_OUTPUT
           else
