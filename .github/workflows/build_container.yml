@@ -86,7 +86,7 @@ jobs:
             -f ${{ matrix.image.dockerfile }}  --output type=registry .
 
       - name: Build and push ${{ matrix.image.name }} image
-        if: steps.changes.outputs.changed == 'true' && ( matrix.image.name == 'preprocessing' || matrix.image.name == 'ensemble' || matrix.image.name == "ml_consumer")
+        if: steps.changes.outputs.changed == 'true' && ( matrix.image.name == 'preprocessing' || matrix.image.name == 'ensemble' || matrix.image.name == 'ml_consumer')
         working-directory: ./src
         run: |
           docker buildx build --platform linux/amd64,linux/arm64 \
