@@ -2,10 +2,22 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import socket
 
 import yaml
 from consul import ConsulClient
+
+
+def setup_logging():
+    """
+    Set up logging configuration.
+    """
+    log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
+    logging.basicConfig(
+        level=log_level,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
 
 
 def get_local_ip():

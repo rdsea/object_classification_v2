@@ -8,6 +8,14 @@ from datamodel import ImageClassificationModelEnum, InferenceServiceConfig
 from fastapi import FastAPI, Request
 from image_classification_agent import ImageClassificationAgent
 
+current_directory = os.path.dirname(os.path.abspath(__file__))
+util_directory = os.path.join(current_directory, "..", "util")
+sys.path.append(util_directory)
+
+import utils  # noqa: E402
+
+utils.setup_logging()
+
 chosen_model = os.environ["CHOSEN_MODEL"]
 if os.environ.get("MANUAL_TRACING"):
     span_processor_endpoint = os.environ.get("OTEL_ENDPOINT")

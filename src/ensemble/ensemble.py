@@ -52,6 +52,8 @@ sys.path.append(util_directory)
 # TODO: change utils to package that other service can reuse
 import utils  # noqa: E402
 
+utils.setup_logging()
+
 config_lock = asyncio.Lock()  # Lock to control access to the global variable
 
 

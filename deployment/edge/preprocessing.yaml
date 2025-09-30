@@ -29,6 +29,8 @@ spec:
           ports:
             - containerPort: 5010
           env:
+            - name: LOG_LEVEL
+              value: "WARNING"
             - name: MANUAL_TRACING
               value: "true"
             - name: OTEL_ENDPOINT

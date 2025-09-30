@@ -30,6 +30,8 @@ spec:
             - containerPort: 5012
           args: ["--model", "MobileNetV2"]
           env:
+            - name: LOG_LEVEL
+              value: "WARNING"
             - name: MANUAL_TRACING
               value: "true"
             - name: OTEL_ENDPOINT

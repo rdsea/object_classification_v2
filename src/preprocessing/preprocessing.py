@@ -54,6 +54,8 @@ sys.path.append(util_directory)
 
 import utils  # noqa: E402
 
+utils.setup_logging()
+
 try:
     config_file = "preprocessing_config.yaml"
     config = utils.load_config(file_path=config_file)
