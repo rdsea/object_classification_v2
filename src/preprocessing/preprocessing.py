@@ -104,6 +104,37 @@ def validate_image_type(content_type: str | None):
             detail=f"UploadFile with type {content_type} is not accepted, only accept {accepted_file_types}",
         )
 
+        # helpers.py (or inside preprocessing.py)
+
+
+HOP_BY_HOP = {
+    "connection",
+    "keep-alive",
+    "proxy-connection",
+    "transfer-encoding",
+    "te",
+    "trailer",
+    "upgrade",
+    "content-length",
+    "host",
+}
+
+
+def build_forward_headers(incoming, extra=None):
+    out = {}
+    for k, v in incoming.items():
+        if v is None:
+            continue
+        lk = k.lower()
+        if lk in HOP_BY_HOP or lk == "cookie":
+            continue
+        out[k] = str(v)  # ensure string
+    if extra:
+        for k, v in extra.items():
+            if v is not None:
+                out[k] = str(v)
+    return out
+
 
 @app.post("/preprocessing")
 async def processing_image(file: UploadFile, request: Request):
@@ -127,11 +158,24 @@ async def processing_image(file: UploadFile, request: Request):
     image_bytes = processed_image.tobytes()
     request_id = str(uuid4())
 
-    headers = {
-        "Timestamp": request.headers.get("Timestamp"),
-        "Content-Type": "application/octet-stream",
-        "Content-Length": str(len(image_bytes)),
+    # Build extra headers you want to enforce
+    extra = {
+        "Content-Type": "application/octet-stream",  # you're sending raw bytes
+        "X-Request-ID": request_id,  # helpful for tracing
     }
+
+    # ensure we always send a Timestamp downstream
+    ts = request.headers.get("Timestamp") or str(int(time.time() * 1000))
+    if ts is not None:
+        extra["Timestamp"] = ts
+    # Merge client headers + your extras (blocklist mode by default)
+    fwd_headers = build_forward_headers(request.headers, extra)
+
+    # headers = {
+    #     "Timestamp": request.headers.get("Timestamp"),
+    #     "Content-Type": "application/octet-stream",
+    #     "Content-Length": str(len(image_bytes)),
+    # }
 
     try:
         async with aiohttp.ClientSession(
@@ -139,18 +183,25 @@ async def processing_image(file: UploadFile, request: Request):
         ) as session:
             logging.info(ENSEMBLE_SERVICE_URL)
             async with session.post(
-                headers=headers,
+                headers=fwd_headers,
                 url=ENSEMBLE_SERVICE_URL,
                 data=image_bytes,
                 params={"request_id": request_id},
             ) as response:
+                body = await response.text()
                 if response.status != 200:
+                    logging.error(f"Ensemble returned {response.status}: {body[:300]}")
                     raise HTTPException(
-                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                        detail=f"Failed to send image to ensemble service. Status code: {response.status}",
+                        status_code=500, detail=f"Ensemble error: {response.status}"
                     )
-                _ = await response.json()
-        return "File accepted"
+        return JSONResponse(content={"response": "File accepted"}, status_code=200)
+        #         if response.status != 200:
+        #             raise HTTPException(
+        #                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        #                 detail=f"Failed to send image to ensemble service. Status code: {response.status}",
+        #             )
+        #         _ = await response.json()
+        # return "File accepted"
     except aiohttp.ClientError as e:
         logging.error(f"Client error: {e}")
         raise HTTPException(

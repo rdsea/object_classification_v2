@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import sys
+import time
 from contextlib import asynccontextmanager
 from typing import Annotated
 
@@ -122,11 +123,22 @@ app = FastAPI(lifespan=lifespan)
 app.state.config = config
 
 
-async def send_post_request(
-    session: aiohttp.ClientSession, url: str, image_data: bytes, headers
-):
-    async with session.post(url, data=image_data, headers=headers) as response:
-        return await response.json()  # Assuming the response is JSON
+# async def send_post_request(
+#     session: aiohttp.ClientSession, url: str, image_data: bytes, headers
+# ):
+#     async with session.post(url, data=image_data, headers=headers) as response:
+#         return await response.json()  # Assuming the response is JSON
+
+
+async def send_post_request(session, url, image_data, headers):
+    async with session.post(url, data=image_data, headers=headers) as resp:
+        text = await resp.text()
+        if resp.status != 200:
+            raise RuntimeError(f"{url} returned {resp.status}: {text[:200]}")
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            return {"raw": text}
 
 
 async def process_image_task(
@@ -178,9 +190,18 @@ async def ensemble(
         request_id = request.query_params["request_id"]
         headers = request.headers
         # logging.info(image_bytes)
+
+        # inside ensemble/ensemble.py
+        ts = request.headers.get("Timestamp")
+        if not ts:
+            ts = str(int(time.time() * 1000))
+
         background_tasks.add_task(
-            process_image_task, image_bytes, request_id, headers, headers["Timestamp"]
+            process_image_task, image_bytes, request_id, headers, ts
         )
+        # background_tasks.add_task(
+        #     process_image_task, image_bytes, request_id, headers, headers["Timestamp"]
+        # )
 
         response = "Success to add image to Ensemble Service"
         return JSONResponse(content={"response": response}, status_code=200)
