@@ -7,7 +7,7 @@ metadata:
     app: ensemble
     version: v1
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: ensemble
@@ -20,8 +20,8 @@ spec:
       annotations:
         sidecar.istio.io/inject: "true"
     spec:
-      nodeSelector:
-        node-role.kubernetes.io/worker: "true"
+      # nodeSelector:
+      #   node-role.kubernetes.io/worker: "true"
       containers:
         - name: ensemble
           imagePullPolicy: "IfNotPresent"
@@ -30,11 +30,11 @@ spec:
             - containerPort: 5011
           env:
             - name: MANUAL_TRACING
-              value: "true"
+              value: "false"
             - name: OTEL_ENDPOINT
               value: "http://my-opentelemetry-collector.observe:4318/v1/traces"
             - name: SEND_TO_QUEUE
-              value: "true"
+              value: "false"
             - name: RABBITMQ_URL
               value: "gateway.cloud-1.svc:31048"
             - name: RABBITMQ_QUEUE_NAME

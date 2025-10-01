@@ -7,7 +7,7 @@ metadata:
     app: preprocessing
     version: v1
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: preprocessing
@@ -20,8 +20,8 @@ spec:
       annotations:
         sidecar.istio.io/inject: "true"
     spec:
-      nodeSelector:
-        node-role.kubernetes.io/worker: "true"
+      # nodeSelector:
+      #   node-role.kubernetes.io/worker: "true"
       containers:
         - name: preprocessing
           imagePullPolicy: "IfNotPresent"
@@ -30,7 +30,7 @@ spec:
             - containerPort: 5010
           env:
             - name: MANUAL_TRACING
-              value: "true"
+              value: "false"
             - name: OTEL_ENDPOINT
               value: "http://my-opentelemetry-collector.observe:4318/v1/traces"
           resources:
