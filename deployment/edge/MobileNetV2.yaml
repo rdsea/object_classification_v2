@@ -2,20 +2,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: mobilenetv2
+  name: inference-mobilenetv2
   labels:
-    app: mobilenetv2
+    app: inference-mobilenetv2
     version: v1
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: mobilenetv2
+      app: inference-mobilenetv2
       version: v1
   template:
     metadata:
       labels:
-        app: mobilenetv2
+        app: inference-mobilenetv2
         version: v1
       annotations:
         sidecar.istio.io/inject: "true"
@@ -23,7 +23,7 @@ spec:
       nodeSelector:
         node-role.kubernetes.io/worker: "true"
       containers:
-        - name: mobilenetv2
+        - name: inference-mobilenetv2
           imagePullPolicy: "IfNotPresent"
           image: rdsea/inference:cpu
           ports:
@@ -47,10 +47,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: mobilenetv2-service
+  name: inference-mobilenetv2-service
 spec:
   ports:
     - port: 5012
       targetPort: 5012
   selector:
-    app: mobilenetv2
+    app: inference-mobilenetv2

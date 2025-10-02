@@ -2,20 +2,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: efficientnetb0
+  name: inference-efficientnetb0
   labels:
-    app: efficientnetb0
+    app: inference-efficientnetb0
     version: v1
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: efficientnetb0
+      app: inference-efficientnetb0
       version: v1
   template:
     metadata:
       labels:
-        app: efficientnetb0
+        app: inference-efficientnetb0
         version: v1
       annotations:
         sidecar.istio.io/inject: "true"
@@ -23,7 +23,7 @@ spec:
       nodeSelector:
         node-role.kubernetes.io/worker: "true"
       containers:
-        - name: efficientnetb0
+        - name: inference-efficientnetb0
           imagePullPolicy: "IfNotPresent"
           image: rdsea/inference:cpu
           ports:
@@ -47,10 +47,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: efficientnetb0-service
+  name: inference-efficientnetb0-service
 spec:
   ports:
     - port: 5012
       targetPort: 5012
   selector:
-    app: efficientnetb0
+    app: inference-efficientnetb0
