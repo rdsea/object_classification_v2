@@ -41,7 +41,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: inference-mobilenetv2-service
+  name: mobilenetv2-service
 spec:
   ports:
     - port: 5012
