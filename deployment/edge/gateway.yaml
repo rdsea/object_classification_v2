@@ -30,3 +30,62 @@ spec:
         - kind: Service
           name: preprocessing-service
           port: 5010
+
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: grafana-route
+  namespace: dashboard
+spec:
+  parentRefs:
+    - name: my-gateway
+      namespace: default
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /grafana
+      backendRefs:
+        - kind: Service
+          name: prometheus-grafana
+          port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: prometheus-route
+  namespace: observe
+spec:
+  parentRefs:
+    - name: my-gateway
+      namespace: default
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /prometheus
+      backendRefs:
+        - kind: Service
+          name: prometheus-kube-prometheus-prometheus
+          port: 9090
+
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: hubble-route
+  namespace: kube-system
+spec:
+  parentRefs:
+    - name: my-gateway
+      namespace: default
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /hubble/
+      backendRefs:
+        - kind: Service
+          name: hubble-ui
+          port: 80

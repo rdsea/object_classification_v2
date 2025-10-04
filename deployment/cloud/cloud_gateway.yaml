@@ -11,31 +11,6 @@ spec:
       allowedRoutes:
         namespaces:
           from: All
-    - name: jaeger-gw
-      protocol: HTTP
-      port: 5678
-      allowedRoutes:
-        namespaces:
-          from: All
----
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: jaeger-route
-  namespace: observe
-spec:
-  parentRefs:
-    - name: cloud-gateway
-      namespace: default
-  rules:
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /jaeger
-      backendRefs:
-        - kind: Service
-          name: jaeger-query
-          port: 80
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -94,23 +69,3 @@ spec:
         - kind: Service
           name: hubble-ui
           port: 80
----
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: jaeger-collector-route
-  namespace: observe
-spec:
-  parentRefs:
-    - name: cloud-gateway
-      namespace: default
-      sectionName: jaeger-gw
-  rules:
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /
-      backendRefs:
-        - kind: Service
-          name: jaeger-collector
-          port: 4317
