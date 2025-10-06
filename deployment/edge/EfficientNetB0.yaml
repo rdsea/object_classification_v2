@@ -25,7 +25,7 @@ spec:
       containers:
         - name: efficientnetb0
           imagePullPolicy: "IfNotPresent"
-          image: rdsea/inference:cpu
+          image: hongtringuyen/inference:drone_app
           ports:
             - containerPort: 5012
           args: ["--model", "EfficientNetB0"]
