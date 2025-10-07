@@ -37,6 +37,13 @@ spec:
               value: "true"
             - name: OTEL_ENDPOINT
               value: "http://my-opentelemetry-collector.observe:4318/v1/traces"
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "1024Mi"
+            limits:
+              cpu: "500m"
+              memory: "1536Mi"
 ---
 apiVersion: v1
 kind: Service
