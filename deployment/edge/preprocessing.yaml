@@ -37,8 +37,8 @@ spec:
               value: "http://my-opentelemetry-collector.observe:4318/v1/traces"
           resources:
             requests:
-              cpu: "250m"
-              memory: "200Mi"
+              cpu: "350m"
+              memory: "150Mi"
             limits:
               cpu: "500m"
               memory: "256Mi"
