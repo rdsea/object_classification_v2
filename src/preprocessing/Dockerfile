@@ -1,30 +1,25 @@
+# This's run from root dir
 FROM rdsea/debian-slim-opencv:latest
 
-WORKDIR /image_preprocessing/preprocessing
+WORKDIR /workspace
 
 COPY --from=ghcr.io/astral-sh/uv:0.9.0 /uv /uvx /bin/
 
-COPY ./preprocessing/*.toml ./
+COPY pyproject.toml uv.lock /workspace/
 
-RUN uv python pin 3.10.18
+RUN uv sync --frozen --no-install-workspace --package=preprocessing --no-cache --compile-bytecode
 
-RUN uv sync --compile-bytecode --no-cache
+COPY src/preprocessing /workspace/src/preprocessing
 
-WORKDIR /image_preprocessing
+COPY src/util /workspace/src/util
 
-COPY ./preprocessing/run_server.sh ./preprocessing/run_server.sh
-
-COPY ./preprocessing/*.yaml ./preprocessing/
-
-COPY ./preprocessing/*.py ./preprocessing/
-
-COPY ./util/ ./util
+RUN uv sync --frozen --package=preprocessing --no-cache --compile-bytecode
 
 EXPOSE 5010
 
-WORKDIR /image_preprocessing/preprocessing
+ENV PATH="/workspace/.venv/bin:$PATH"
 
-ENV PATH="/image_preprocessing/preprocessing/.venv/bin:$PATH"
+WORKDIR /workspace/src/preprocessing
 
 ENTRYPOINT [ "./run_server.sh" ]
 

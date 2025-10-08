@@ -1,27 +1,25 @@
+# This's run from root dir
 FROM debian:stable-slim
 
-WORKDIR /ensemble
+WORKDIR /workspace
 
 COPY --from=ghcr.io/astral-sh/uv:0.9.0 /uv /uvx /bin/
 
-COPY ./ensemble/*.toml ./
+COPY pyproject.toml uv.lock /workspace/
 
-COPY ./ensemble/run_server.sh ./ensemble/run_server.sh
+RUN uv sync --frozen --no-install-workspace --package=ensemble --no-cache --compile-bytecode
 
-RUN uv python pin 3.10.18
+COPY src/ensemble /workspace/src/ensemble
 
-RUN uv sync --compile-bytecode --no-cache
+COPY src/util /workspace/src/util
 
-COPY ./ensemble/*.py ./ensemble/
-
-COPY ./ensemble/*.yaml ./ensemble/
-
-COPY ./util/ ./util
+RUN uv sync --frozen --package=ensemble --no-cache --compile-bytecode
 
 EXPOSE 5011
 
-WORKDIR /ensemble/ensemble
+ENV PATH="/workspace/.venv/bin:$PATH"
 
-ENV PATH="/ensemble/.venv/bin:$PATH"
+WORKDIR /workspace/src/ensemble
 
 ENTRYPOINT [ "./run_server.sh" ]
+

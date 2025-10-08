@@ -271,6 +271,7 @@ dependencies = [
     { name = "opentelemetry-instrumentation-aiohttp-client" },
     { name = "opentelemetry-instrumentation-fastapi" },
     { name = "python-multipart" },
+    { name = "util" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -286,6 +287,7 @@ requires-dist = [
     { name = "opentelemetry-instrumentation-aiohttp-client", specifier = ">=0.48b0" },
     { name = "opentelemetry-instrumentation-fastapi", specifier = ">=0.48b0" },
     { name = "python-multipart" },
+    { name = "util", editable = "src/util" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30.3" },
 ]
 
@@ -542,6 +544,7 @@ dependencies = [
     { name = "opentelemetry-instrumentation-fastapi" },
     { name = "pillow" },
     { name = "requests" },
+    { name = "util" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -562,6 +565,7 @@ requires-dist = [
     { name = "opentelemetry-instrumentation-fastapi", specifier = ">=0.48b0" },
     { name = "pillow", specifier = ">=10.4.0" },
     { name = "requests", specifier = "==2.32.3" },
+    { name = "util", editable = "src/util" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30.3" },
 ]
 provides-extras = ["cpu"]
@@ -1016,6 +1020,7 @@ dependencies = [
     { name = "opentelemetry-instrumentation-fastapi" },
     { name = "python-multipart" },
     { name = "requests" },
+    { name = "util" },
     { name = "uvicorn", extra = ["standard"] },
     { name = "v" },
 ]
@@ -1032,6 +1037,7 @@ requires-dist = [
     { name = "opentelemetry-instrumentation-fastapi", specifier = ">=0.48b0" },
     { name = "python-multipart" },
     { name = "requests" },
+    { name = "util", editable = "src/util" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30.3" },
     { name = "v", specifier = ">=1" },
 ]

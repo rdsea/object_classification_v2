@@ -11,8 +11,12 @@ dependencies = [
   "opentelemetry-instrumentation-aiohttp-client>=0.48b0",
   "aio-pika>=9.5.5",
   "opentelemetry-instrumentation-aio-pika>=0.54b1",
+  "util",
 ]
 
 name = "ensemble"
 version = "0.1.0"
 requires-python = "== 3.10.18"
+
+[tool.uv.sources]
+util = { workspace = true }
