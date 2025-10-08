@@ -1,65 +1,82 @@
-# Tutorials that I follows
+# Object Classification Research Prototype
 
-- [ONNX runtime](https://opensource.microsoft.com/blog/2023/02/08/performant-on-device-inferencing-with-onnx-runtime/)
+This repository contains a research prototype for an object classification system. The system is designed to be deployed on both cloud and edge devices, and it uses a variety of models and technologies to achieve high performance and accuracy.
 
-# Testing inference service
+## Table of Contents
 
-1. Create onnx model
+- [Architecture](#architecture)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Running the Services](#running-the-services)
+- [Usage](#usage)
+- [Deployment](#deployment)
+- [License](#license)
 
-- Install required libs
+## Architecture
 
-```bash
-pip install -r /artifact/model_test/onnx/create_onnx_requirements.txt
-```
+The architecture of the system is described in the `architecture.drawio` file. It consists of a set of microservices that work together to provide the object classification functionality.
 
-- Run python script to create onnx model
+## Getting started
 
-```bash
-cd artifact/model_test/onnx
-mkdir onnx_model
-python3 create_onnx_model.py
-```
+### Prerequisites
 
-2. Download imagenet:
-   Two ways:
+- [Docker](https://www.docker.com/get-started)
+- [Kubernetes](https://kubernetes.io/docs/tasks/tools/) (optional, for deployment)
+- [uv](https://github.com/astral-sh/uv)
 
-- Download the imagenet dataset from Google drive and extract it to new_object_classification artifact/dataset/imagenet/data/
-- Download from remote server:
+### Installation
 
-```bash
-rsync -r aaltosea@edge-raspi1.cs.aalto.fi:/home/aaltosea/RunningExample/new_object_classification/src/artifact/dataset/imagenet/data/val_images $your_local_destination
-```
+1. **Clone the repository:**
 
-3. Move onnx_model to the inference model
+   ```bash
+   git clone <repository-url>
+   cd object_classification_v2
+   ```
 
-```bash
-mv ./artifact/model_test/onnx/onnx_model ./inference
-```
+2. **Create a virtual environment and install dependencies:**
 
-or download it to src/inference/onnx_model with:
+   This project uses `uv` for package management. The dependencies are defined in each service's `pyproject.toml` file. To install the dependencies for all services, you can run the following command in the root directory:
 
-```bash
-rsync -r aaltosea@edge-jetxavier1.cs.aalto.fi:/mnt/sd_card/git/RunningExample/new_object_classification/src/artifact/model_test/onnx/onnx_model/ ./onnx_model
-```
+   ```bash
+   uv pip install -r src/ensemble/pyproject.toml -r src/inference/pyproject.toml -r src/preprocessing/pyproject.toml -r src/util/pyproject.toml
+   ```
 
-4. Run the inference service
+   Alternatively, you can install the dependencies for each service individually. For example, to install the dependencies for the `inference` service:
 
-- Run the server by following. Add --debug flag for auto-reload during development
+   ```bash
+   cd src/inference
+   uv pip install -r pyproject.toml
+   ```
 
-```bash
-cd inference
-inference/run_server.sh
-```
+### Running the Services
 
-> [!NOTE]
->
-> The default model is MobileNet, change CHOSEN_MODEL in run_server.sh to other model if you want to change the used model
+The services can be run individually or all at once using the `start_all_service.sh` script.
 
-5. Run the client
+**To run all services:**
 
 ```bash
-cd /client
-python3 client_inference.py --rate 10
+./start_all_service.sh
 ```
 
-- The default rate is 15
+**To run individual services:**
+
+Each service has a `run_server.sh` script that can be used to start it. For example, to start the inference service:
+
+```bash
+cd src/inference
+./run_server.sh
+```
+
+## Usage
+
+The primary way to interact with the system is through the API exposed by the gateway service. The API endpoints and their usage are documented in the respective service directories.
+
+## Deployment
+
+The `deployment` directory contains scripts and configuration files for deploying the system to both cloud and edge environments. See the README files in those directories for more information.
+
+## License
+
+This project is licensed under the terms of the [Apache license](LICENSE).
+
