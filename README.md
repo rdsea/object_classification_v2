@@ -9,9 +9,9 @@ This repository contains a research prototype for an object classification syste
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
   - [Running the Services](#running-the-services)
-- [Usage](#usage)
 - [Deployment](#deployment)
 - [License](#license)
+- [References](#references)
 
 ## Architecture
 
@@ -68,10 +68,6 @@ cd src/inference
 ./run_server.sh
 ```
 
-## Usage
-
-The primary way to interact with the system is through the API exposed by the gateway service. The API endpoints and their usage are documented in the respective service directories.
-
 ## Deployment
 
 The `deployment` directory contains scripts and configuration files for deploying the system to both cloud and edge environments. See the README files in those directories for more information.
@@ -79,4 +75,18 @@ The `deployment` directory contains scripts and configuration files for deployin
 ## License
 
 This project is licensed under the terms of the [Apache license](LICENSE).
+
+## References
+
+If you use our prototype for research, please cite our paper where we describe the prototype in detail:
+
+```bibtex
+@INPROCEEDINGS{nguyen_2025_sagely,
+  author={Nguyen, Hong-Tri and Yuan, Liang and Nguyen, Anh-Dung and Babar, M. Ali and Truong, Hong-Linh},
+  booktitle={2025 IEEE International Conference on Web Services (ICWS)},
+  title={SAGELY - Context-Aware Holistic Service Policy Enforcement Across Swarm-Edge Continuum},
+  year={2025},
+  pages={607-617},
+  doi={10.1109/ICWS67624.2025.00083}}
+```
 
