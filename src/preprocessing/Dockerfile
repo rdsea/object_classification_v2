@@ -2,7 +2,7 @@ FROM rdsea/debian-slim-opencv:latest
 
 WORKDIR /image_preprocessing/preprocessing
 
-COPY --from=ghcr.io/astral-sh/uv:0.7.21 /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.9.0 /uv /uvx /bin/
 
 COPY ./preprocessing/*.toml ./
 
