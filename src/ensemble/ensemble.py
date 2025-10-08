@@ -4,7 +4,6 @@ import asyncio
 import json
 import logging
 import os
-import sys
 from contextlib import asynccontextmanager
 from typing import Annotated
 
@@ -13,6 +12,8 @@ import aiohttp
 import ensemble_function
 from fastapi import BackgroundTasks, FastAPI, Form, Request
 from fastapi.responses import JSONResponse
+
+from util.utils import load_config, setup_logging
 
 if os.environ.get("MANUAL_TRACING"):
     span_processor_endpoint = os.environ.get("OTEL_ENDPOINT")
@@ -45,20 +46,14 @@ if os.environ.get("MANUAL_TRACING"):
 
 SEND_TO_QUEUE = os.environ.get("SEND_TO_QUEUE", "false").lower() == "true"
 
-current_directory = os.path.dirname(os.path.abspath(__file__))
-util_directory = os.path.join(current_directory, "..", "util")
-sys.path.append(util_directory)
 
-# TODO: change utils to package that other service can reuse
-import utils  # noqa: E402
-
-utils.setup_logging()
+setup_logging()
 
 config_lock = asyncio.Lock()  # Lock to control access to the global variable
 
 
 config_file = "ensemble_service.yaml"
-config = utils.load_config(file_path=config_file)
+config = load_config(file_path=config_file)
 
 assert config is not None
 logging.debug(f"Ensemble Service configuration: {config}")

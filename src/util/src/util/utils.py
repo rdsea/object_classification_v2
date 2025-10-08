@@ -6,7 +6,6 @@ import os
 import socket
 
 import yaml
-from consul import ConsulClient
 
 
 def setup_logging():
@@ -49,23 +48,3 @@ def load_config(file_path: str) -> dict | None:
             return None
     except yaml.YAMLError as exc:
         print(exc)
-
-
-def handle_service_query(
-    consul_client: ConsulClient, service_name, query_type, tags: list[str] | None = None
-):
-    try:
-        if query_type == "all":
-            return consul_client.get_all_service_instances(service_name, tags)
-
-        if query_type == "one":
-            return consul_client.get_n_random_service_instances(service_name, tags, n=1)
-
-        if query_type == "quorum":
-            return consul_client.get_quorum_service_instances(service_name, tags)
-
-        logging.error(f"Invalid query type: {query_type}")
-        return None
-    except Exception as e:
-        logging.error(f"Error in handle_service_query: {e}")
-        return None

@@ -7,21 +7,16 @@ dependencies = []
 readme = "README.md"
 requires-python = ">= 3.10"
 
-[tool.rye]
-dev-dependencies = []
-managed = true
-virtual = true
+[tool.uv.sources]
+util = { workspace = true }
 
-[tool.hatch.metadata]
-allow-direct-references = true
-
-[tool.rye.workspace]
+[tool.uv.workspace]
 members = [
   # "src/*",
   "src/database",
   "src/ensemble",
   "src/inference",
   "src/preprocessing",
-  "src/database",
+  "src/util",
 
 ]

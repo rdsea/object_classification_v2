@@ -12,6 +12,8 @@ from fastapi import FastAPI, HTTPException, Request, UploadFile, status
 from fastapi.responses import JSONResponse
 from image_processing_functions import resize
 
+from util.utils import load_config, setup_logging
+
 if os.environ.get("MANUAL_TRACING"):
     span_processor_endpoint = os.environ.get("OTEL_ENDPOINT")
     if span_processor_endpoint is None:
@@ -48,17 +50,11 @@ if os.environ.get("OPENZITI"):
     ENSEMBLE_SERVICE_URL = "http://ensemble.miniziti.private:5011/ensemble_service"
 
 
-current_directory = os.path.dirname(os.path.abspath(__file__))
-util_directory = os.path.join(current_directory, "..", "util")
-sys.path.append(util_directory)
-
-import utils  # noqa: E402
-
-utils.setup_logging()
+setup_logging()
 
 try:
     config_file = "preprocessing_config.yaml"
-    config = utils.load_config(file_path=config_file)
+    config = load_config(file_path=config_file)
 except Exception as e:
     logging.error(f"Error loading config file: {e}")
     sys.exit(1)
