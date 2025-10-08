@@ -19,19 +19,19 @@ jobs:
         image:
           - name: preprocessing
             dir: src/preprocessing
-            dockerfile: preprocessing/Dockerfile
+            dockerfile: src/preprocessing/Dockerfile
 
           - name: ensemble
             dir: src/ensemble
-            dockerfile: ensemble/Dockerfile
+            dockerfile: src/ensemble/Dockerfile
 
           - name: inference_cpu
             dir: src/inference
-            dockerfile: inference/Dockerfile.cpu
+            dockerfile: src/inference/Dockerfile.cpu
 
           - name: ml_consumer
-            dir: src/database
-            dockerfile: database/Dockerfile
+            dir: src/ml_consumer
+            dockerfile: src/ml_consumer/Dockerfile
 
     steps:
       - name: Checkout repository

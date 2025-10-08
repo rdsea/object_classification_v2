@@ -6,8 +6,12 @@ dependencies = [
   "opentelemetry-instrumentation-aio-pika>=0.54b1",
   "opentelemetry-distro>=0.54b1",
   "cassandra-driver>=3.29.2",
+  "util",
 ]
 
-name = "ml_consumer"
+name = "ml-consumer"
 version = "0.1.0"
 requires-python = ">= 3.10.12"
+
+[tool.uv.sources]
+util = { workspace = true }

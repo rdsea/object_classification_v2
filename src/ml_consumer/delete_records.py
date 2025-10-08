@@ -1,7 +1,8 @@
 import asyncio
 
-from ml_consumer import MONGODB_URI
 from motor.motor_asyncio import AsyncIOMotorClient
+
+from ml_consumer import MONGODB_URI
 
 mongo_client = AsyncIOMotorClient(MONGODB_URI)
 db = mongo_client["object-detection"]

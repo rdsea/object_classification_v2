@@ -625,7 +625,7 @@ wheels = [
 [[package]]
 name = "ml-consumer"
 version = "0.1.0"
-source = { virtual = "src/database" }
+source = { virtual = "src/ml_consumer" }
 dependencies = [
     { name = "aio-pika" },
     { name = "cassandra-driver" },
@@ -633,6 +633,7 @@ dependencies = [
     { name = "opentelemetry-exporter-otlp" },
     { name = "opentelemetry-instrumentation-aio-pika" },
     { name = "pyyaml" },
+    { name = "util" },
 ]
 
 [package.metadata]
@@ -643,6 +644,7 @@ requires-dist = [
     { name = "opentelemetry-exporter-otlp", specifier = ">=1.33.1" },
     { name = "opentelemetry-instrumentation-aio-pika", specifier = ">=0.54b1" },
     { name = "pyyaml", specifier = ">=6.0.2" },
+    { name = "util", editable = "src/util" },
 ]
 
 [[package]]

@@ -12,6 +12,8 @@ import aio_pika
 from cassandra.cluster import Cluster
 from cassandra.query import SimpleStatement
 
+from util.utils import setup_logging
+
 MAX_RETRIES = 10
 INITIAL_DELAY = 2
 MAX_DELAY = 60
@@ -32,13 +34,7 @@ SCYLLA_PORT = int(os.getenv("SCYLLA_PORT", 9042))
 KEYSPACE = "object_detection"
 TABLE_NAME = "results"
 
-current_directory = os.path.dirname(os.path.abspath(__file__))
-util_directory = os.path.join(current_directory, "..", "util")
-sys.path.append(util_directory)
-
-import utils  # noqa: E402
-
-utils.setup_logging()
+setup_logging()
 
 # === TRACING SETUP ===
 if os.environ.get("MANUAL_TRACING"):
