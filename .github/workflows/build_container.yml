@@ -76,7 +76,6 @@ jobs:
 
       - name: Download inference data from Google Drive
         if: matrix.image.name == 'inference_cpu' && steps.changes.outputs.changed == 'true'
-        working-directory: ./src
         run: |
           pip install gdown
           # Replace with your actual Google Drive folder URL or ID
@@ -87,7 +86,6 @@ jobs:
 
       - name: Build and push ${{ matrix.image.name }} image
         if: steps.changes.outputs.changed == 'true' && ( matrix.image.name == 'preprocessing' || matrix.image.name == 'ensemble' || matrix.image.name == 'ml_consumer')
-        working-directory: ./src
         run: |
           docker buildx build --platform linux/amd64,linux/arm64 \
             -t rdsea/${{ matrix.image.name }}:${{ github.event.inputs.image_tag || 'latest' }} \
