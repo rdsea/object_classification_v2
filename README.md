@@ -39,14 +39,13 @@ The architecture of the system is described in the `architecture.drawio` file. I
    This project uses `uv` for package management. The dependencies are defined in each service's `pyproject.toml` file. To install the dependencies for all services, you can run the following command in the root directory:
 
    ```bash
-   uv pip install -r src/ensemble/pyproject.toml -r src/inference/pyproject.toml -r src/preprocessing/pyproject.toml -r src/util/pyproject.toml
+   uv sync --all-packages
    ```
 
-   Alternatively, you can install the dependencies for each service individually. For example, to install the dependencies for the `inference` service:
+   Alternatively, you can install the dependencies for each service individually. For example, to install the dependencies for the `preprocessing` service:
 
    ```bash
-   cd src/inference
-   uv pip install -r pyproject.toml
+   uv sync --package=preprocessing
    ```
 
 ### Running the Services
