@@ -12,7 +12,7 @@ COPY src/inference /workspace/src/inference
 
 COPY src/util /workspace/src/util
 
-RUN uv sync --frozen --package=inference --no-cache --compile-bytecode
+RUN uv sync --frozen --package=inference --no-cache --compile-bytecode --extra cpu
 
 EXPOSE 5012
 

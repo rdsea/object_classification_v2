@@ -1,0 +1,80 @@
+version: "3.8"
+
+x-inference-build: &inference-build
+  context: .
+  dockerfile: src/inference/Dockerfile.cpu
+
+services:
+  preprocessing:
+    image: rdsea/preprocessing
+    build:
+      context: .
+      dockerfile: src/preprocessing/Dockerfile
+    restart: unless-stopped
+    ports:
+      - 5010:5010
+    environment:
+      DOCKER: "true"
+      LOG_LEVEL: "WARNING"
+      MANUAL_TRACING: "true"
+      OTEL_ENDPOINT: "http://otel-collector:4318/v1/traces"
+    depends_on:
+      - otel-collector
+
+  ensemble:
+    image: rdsea/ensemble
+    build:
+      context: .
+      dockerfile: src/ensemble/Dockerfile
+    restart: unless-stopped
+    environment:
+      DOCKER: "true"
+      LOG_LEVEL: "WARNING"
+      MANUAL_TRACING: "true"
+      OTEL_ENDPOINT: "http://otel-collector:4318/v1/traces"
+      SEND_TO_QUEUE: "false"
+      RABBITMQ_URL: "gateway.cloud-1.svc:30072"
+      RABBITMQ_QUEUE_NAME: "object_detection_result"
+      RABBITMQ_USERNAME: "admin"
+      RABBITMQ_PASSWORD: "adminadminadmin"
+    depends_on:
+      - otel-collector
+
+  efficientnetb0:
+    image: rdsea/inference:cpu
+    build: *inference-build
+    restart: unless-stopped
+    command: ["--model", "EfficientNetB0"]
+    environment:
+      LOG_LEVEL: "WARNING"
+      MANUAL_TRACING: "true"
+      OTEL_ENDPOINT: "http://otel-collector:4318/v1/traces"
+    depends_on:
+      - otel-collector
+
+  mobilenetv2:
+    image: rdsea/inference:cpu
+    build: *inference-build
+    restart: unless-stopped
+    command: ["--model", "MobileNetV2"]
+    environment:
+      LOG_LEVEL: "WARNING"
+      MANUAL_TRACING: "true"
+      OTEL_ENDPOINT: "http://otel-collector:4318/v1/traces"
+    depends_on:
+      - otel-collector
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.85.0
+    restart: unless-stopped
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    ports:
+      - "1888:1888" # pprof extension
+      - "8888:8888" # Prometheus metrics exposed by the collector
+      - "8889:8889" # Prometheus exporter metrics
+      - "13133:13133" # health_check extension
+      - "4317:4317" # OTLP gRPC receiver
+      - "4318:4318" # OTLP HTTP receiver
+      - "55679:55679" # zpages extension
