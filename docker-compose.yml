@@ -17,7 +17,7 @@ services:
       DOCKER: "true"
       LOG_LEVEL: "WARNING"
       MANUAL_TRACING: "true"
-      OTEL_ENDPOINT: "http://otel-collector:4318/v1/traces"
+      OTEL_ENDPOINT: "http://otel-collector:4317"
     depends_on:
       - otel-collector
 
@@ -31,7 +31,7 @@ services:
       DOCKER: "true"
       LOG_LEVEL: "WARNING"
       MANUAL_TRACING: "true"
-      OTEL_ENDPOINT: "http://otel-collector:4318/v1/traces"
+      OTEL_ENDPOINT: "http://otel-collector:4317"
       SEND_TO_QUEUE: "false"
       RABBITMQ_URL: "gateway.cloud-1.svc:30072"
       RABBITMQ_QUEUE_NAME: "object_detection_result"
@@ -48,7 +48,7 @@ services:
     environment:
       LOG_LEVEL: "WARNING"
       MANUAL_TRACING: "true"
-      OTEL_ENDPOINT: "http://otel-collector:4318/v1/traces"
+      OTEL_ENDPOINT: "http://otel-collector:4317"
     depends_on:
       - otel-collector
 
@@ -60,7 +60,7 @@ services:
     environment:
       LOG_LEVEL: "WARNING"
       MANUAL_TRACING: "true"
-      OTEL_ENDPOINT: "http://otel-collector:4318/v1/traces"
+      OTEL_ENDPOINT: "http://otel-collector:4317"
     depends_on:
       - otel-collector
 
