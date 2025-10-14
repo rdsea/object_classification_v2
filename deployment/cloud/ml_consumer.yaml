@@ -33,7 +33,7 @@ spec:
             ]
       containers:
         - name: ml-consumer
-          image: rdsea/ml_consumer:v3
+          image: rdsea/ml_consumer:latest
           env:
             - name: LOG_LEVEL
               value: "WARNING"
@@ -54,7 +54,7 @@ spec:
             - name: MANUAL_TRACING
               value: "true"
             - name: OTEL_ENDPOINT
-              value: "http://my-opentelemetry-collector.observe:4318/v1/traces" # Replace with your OpenTelemetry collector endpoint
+              value: "http://my-opentelemetry-collector.observe:4317" # Replace with your OpenTelemetry collector endpoint
 ---
 apiVersion: v1
 kind: Secret
