@@ -12,7 +12,7 @@ import aio_pika
 from cassandra.cluster import Cluster
 from cassandra.query import SimpleStatement
 
-from util.utils import setup_logging
+from util.utils import setup_otel
 
 MAX_RETRIES = 10
 INITIAL_DELAY = 2
@@ -34,31 +34,16 @@ SCYLLA_PORT = int(os.getenv("SCYLLA_PORT", 9042))
 KEYSPACE = "object_detection"
 TABLE_NAME = "results"
 
-setup_logging()
+# Set up logging with service name and instance
+service_name = os.environ.get("SERVICE_NAME", "ml-consumer")
+instance = os.uname().nodename if hasattr(os, "uname") else "unknown"
+logger, tracer = setup_otel(service_name)
 
 # === TRACING SETUP ===
 if os.environ.get("MANUAL_TRACING"):
-    from opentelemetry import trace
-    from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
     from opentelemetry.instrumentation.aio_pika import AioPikaInstrumentor
-    from opentelemetry.sdk.resources import SERVICE_NAME, Resource
-    from opentelemetry.sdk.trace import TracerProvider
-    from opentelemetry.sdk.trace.export import BatchSpanProcessor
-
-    span_processor_endpoint = os.environ.get("OTEL_ENDPOINT")
-    if not span_processor_endpoint:
-        raise Exception("OTEL_ENDPOINT env variable is required for manual tracing")
 
     AioPikaInstrumentor().instrument()
-
-    trace_provider = TracerProvider(
-        resource=Resource.create({SERVICE_NAME: "ml-consumer"})
-    )
-    trace_provider.add_span_processor(
-        BatchSpanProcessor(OTLPSpanExporter(endpoint=span_processor_endpoint))
-    )
-    trace.set_tracer_provider(trace_provider)
-    tracer = trace.get_tracer(__name__)
 else:
     tracer = None
 

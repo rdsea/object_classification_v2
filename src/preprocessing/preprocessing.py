@@ -12,33 +12,9 @@ from fastapi import FastAPI, HTTPException, Request, UploadFile, status
 from fastapi.responses import JSONResponse
 from image_processing_functions import resize
 
-from util.utils import load_config, setup_logging
+from util.utils import load_config, setup_otel
 
-if os.environ.get("MANUAL_TRACING"):
-    span_processor_endpoint = os.environ.get("OTEL_ENDPOINT")
-    if span_processor_endpoint is None:
-        raise Exception("Manual debugging requires OTEL_ENDPOINT environment variable")
-
-    from opentelemetry import trace
-    from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-    from opentelemetry.instrumentation.aiohttp_client import AioHttpClientInstrumentor
-
-    # from opentelemetry.sdk.metrics import MeterProvider
-    # from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-    from opentelemetry.sdk.resources import SERVICE_NAME, Resource
-    from opentelemetry.sdk.trace import TracerProvider
-    from opentelemetry.sdk.trace.export import BatchSpanProcessor
-
-    AioHttpClientInstrumentor().instrument()
-    # Service name is required for most backends
-    resource = Resource(attributes={SERVICE_NAME: "preprocessing"})
-
-    trace_provider = TracerProvider(resource=resource)
-    processor = BatchSpanProcessor(OTLPSpanExporter(endpoint=span_processor_endpoint))
-    trace_provider.add_span_processor(processor)
-    trace.set_tracer_provider(trace_provider)
-
-    tracer = trace.get_tracer(__name__)
+SERVICE_NAME = os.environ.get("SERVICE_NAME", "ensemble")
 
 ENSEMBLE_SERVICE_URL = (
     "http://ensemble-service.default.svc.cluster.local:5011/ensemble_service"
@@ -50,7 +26,7 @@ if os.environ.get("OPENZITI"):
     ENSEMBLE_SERVICE_URL = "http://ensemble.miniziti.private:5011/ensemble_service"
 
 
-setup_logging()
+setup_otel(SERVICE_NAME)
 
 try:
     config_file = "preprocessing_config.yaml"
@@ -170,6 +146,8 @@ async def processing_image(file: UploadFile, request: Request):
 
 
 if os.environ.get("MANUAL_TRACING"):
+    from opentelemetry.instrumentation.aiohttp_client import AioHttpClientInstrumentor
     from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
+    AioHttpClientInstrumentor().instrument()
     FastAPIInstrumentor.instrument_app(app, exclude_spans=["send", "receive"])

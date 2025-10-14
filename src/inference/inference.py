@@ -8,47 +8,20 @@ from datamodel import ImageClassificationModelEnum, InferenceServiceConfig
 from fastapi import FastAPI, Request
 from image_classification_agent import ImageClassificationAgent
 
-from util.utils import setup_logging
+from util.utils import setup_otel
 
 current_directory = os.path.dirname(os.path.abspath(__file__))
 util_directory = os.path.join(current_directory, "..", "util")
 sys.path.append(util_directory)
 
-
-setup_logging()
+# Set up logging with service name and instance
+default_model = "MobileNetV2"
+SERVICE_NAME = os.environ.get(
+    "SERVICE_NAME", f"inference-{os.environ.get('CHOSEN_MODEL', default_model).lower()}"
+)
+setup_otel(SERVICE_NAME)
 
 chosen_model = os.environ["CHOSEN_MODEL"]
-if os.environ.get("MANUAL_TRACING"):
-    span_processor_endpoint = os.environ.get("OTEL_ENDPOINT")
-    if span_processor_endpoint is None:
-        raise Exception("Manual debugging requires OTEL_ENDPOINT environment variable")
-
-    from opentelemetry import trace
-    from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-
-    # from opentelemetry.sdk.metrics import MeterProvider
-    # from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-    from opentelemetry.sdk.resources import SERVICE_NAME, Resource
-    from opentelemetry.sdk.trace import TracerProvider
-    from opentelemetry.sdk.trace.export import BatchSpanProcessor
-
-    # Service name is required for most backends
-    resource = Resource(attributes={SERVICE_NAME: f"inference-{chosen_model.lower()}"})
-
-    trace_provider = TracerProvider(resource=resource)
-    processor = BatchSpanProcessor(OTLPSpanExporter(endpoint=span_processor_endpoint))
-    trace_provider.add_span_processor(processor)
-    trace.set_tracer_provider(trace_provider)
-
-    tracer = trace.get_tracer(__name__)
-#
-
-# reader = PeriodicExportingMetricReader(
-#     OTLPMetricExporter(endpoint="http://localhost:4318/v1/metrics")
-# )
-# meterProvider = MeterProvider(resource=resource, metric_readers=[reader])
-# metrics.set_meter_provider(meterProvider)
-
 # NOTE: model config in the inference service config
 #
 MODEL_CONFIG = {

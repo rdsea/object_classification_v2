@@ -13,41 +13,13 @@ import ensemble_function
 from fastapi import BackgroundTasks, FastAPI, Form, Request
 from fastapi.responses import JSONResponse
 
-from util.utils import load_config, setup_logging
+from util.utils import load_config, setup_otel
 
-if os.environ.get("MANUAL_TRACING"):
-    span_processor_endpoint = os.environ.get("OTEL_ENDPOINT")
-    if span_processor_endpoint is None:
-        raise Exception("Manual debugging requires OTEL_ENDPOINT environment variable")
-
-    from opentelemetry import trace
-    from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-    from opentelemetry.instrumentation.aio_pika import AioPikaInstrumentor
-    from opentelemetry.instrumentation.aiohttp_client import AioHttpClientInstrumentor
-
-    # from opentelemetry.sdk.metrics import MeterProvider
-    # from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-    from opentelemetry.sdk.resources import SERVICE_NAME, Resource
-    from opentelemetry.sdk.trace import TracerProvider
-    from opentelemetry.sdk.trace.export import BatchSpanProcessor
-
-    AioHttpClientInstrumentor().instrument()
-
-    AioPikaInstrumentor().instrument()
-    # Service name is required for most backends
-    resource = Resource(attributes={SERVICE_NAME: "ensemble"})
-
-    trace_provider = TracerProvider(resource=resource)
-    processor = BatchSpanProcessor(OTLPSpanExporter(endpoint=span_processor_endpoint))
-    trace_provider.add_span_processor(processor)
-    trace.set_tracer_provider(trace_provider)
-
-    tracer = trace.get_tracer(__name__)
+SERVICE_NAME = os.environ.get("SERVICE_NAME", "ensemble")
 
 SEND_TO_QUEUE = os.environ.get("SEND_TO_QUEUE", "false").lower() == "true"
 
-
-setup_logging()
+setup_otel(SERVICE_NAME)
 
 config_lock = asyncio.Lock()  # Lock to control access to the global variable
 
@@ -202,6 +174,10 @@ async def change_requirement(configuration: Annotated[dict, Form()]):
 
 
 if os.environ.get("MANUAL_TRACING"):
+    from opentelemetry.instrumentation.aio_pika import AioPikaInstrumentor
+    from opentelemetry.instrumentation.aiohttp_client import AioHttpClientInstrumentor
     from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
+    AioHttpClientInstrumentor().instrument()
+    AioPikaInstrumentor().instrument()
     FastAPIInstrumentor.instrument_app(app, exclude_spans=["send", "receive"])
