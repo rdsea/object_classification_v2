@@ -2,7 +2,6 @@ import asyncio
 import logging
 import os
 import sys
-import time
 from uuid import uuid4
 
 import aiohttp
@@ -72,7 +71,7 @@ def validate_image_type(content_type: str | None):
             detail="UploadFile have no content type",
         )
     if content_type not in accepted_file_types:
-        logging.info(content_type)
+        logging.error(content_type)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"UploadFile with type {content_type} is not accepted, only accept {accepted_file_types}",
@@ -81,7 +80,7 @@ def validate_image_type(content_type: str | None):
 
 @app.post("/preprocessing")
 async def processing_image(file: UploadFile, request: Request):
-    logging.info(request.headers)
+    logging.debug(request.headers)
     validate_image_type(file.content_type)
 
     contents = await file.read()
@@ -95,9 +94,6 @@ async def processing_image(file: UploadFile, request: Request):
     else:
         processed_image = image
 
-    start_time = time.time()
-
-    logging.info(f"{(time.time() - start_time) * 1000}")
     image_bytes = processed_image.tobytes()
     request_id = str(uuid4())
 
@@ -111,7 +107,7 @@ async def processing_image(file: UploadFile, request: Request):
         async with aiohttp.ClientSession(
             timeout=aiohttp.ClientTimeout(total=10)
         ) as session:
-            logging.info(ENSEMBLE_SERVICE_URL)
+            logging.debug(ENSEMBLE_SERVICE_URL)
             async with session.post(
                 headers=headers,
                 url=ENSEMBLE_SERVICE_URL,

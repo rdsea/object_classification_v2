@@ -31,11 +31,11 @@ spec:
           args: ["--model", "MobileNetV2"]
           env:
             - name: LOG_LEVEL
-              value: "WARNING"
+              value: "INFO"
             - name: MANUAL_TRACING
               value: "true"
             - name: OTEL_ENDPOINT
-              value: "http://my-opentelemetry-collector.observe:4318/v1/traces"
+              value: "http://my-opentelemetry-collector.observe:4317"
           resources:
             requests:
               cpu: "1500m"

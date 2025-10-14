@@ -104,7 +104,7 @@ async def process_image_task(
         ensemble_function,
         app.state.config["aggregating"]["aggregating_func"]["func_name"],
     )
-    logging.info(f"List service url: {INFERENCE_SERVICE_URLS}")
+    logging.debug(f"List service url: {INFERENCE_SERVICE_URLS}")
 
     if not INFERENCE_SERVICE_URLS:
         raise RuntimeError("No inference service url")
@@ -123,7 +123,7 @@ async def process_image_task(
         # Run ensemble function on the results
         final_result = chosen_ensemble_function(results, request_id)
         final_result["Timestamp"] = timestamp
-        logging.info(f"Ensembled result: {final_result}")
+        logging.debug(f"Ensembled result: {final_result}")
 
         if SEND_TO_QUEUE:
             channel = app.state.rabbitmq_channel
@@ -133,7 +133,7 @@ async def process_image_task(
             message_body = json.dumps(final_result).encode()
             message = aio_pika.Message(body=message_body)
             await channel.default_exchange.publish(message, routing_key=queue_name)
-            logging.info(f"Sent result to RabbitMQ queue {queue_name}")
+            logging.debug(f"Sent result to RabbitMQ queue {queue_name}")
 
 
 @app.post("/ensemble_service")

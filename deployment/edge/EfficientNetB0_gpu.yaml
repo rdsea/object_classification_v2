@@ -25,18 +25,18 @@ spec:
       runtimeClassName: nvidia
       containers:
         - name: inference-efficientnetb0
-          imagePullPolicy: "IfNotPresent"
+          imagePullPolicy: "Always"
           image: rdsea/inference_gpu:latest
           ports:
             - containerPort: 5012
           args: ["--model", "EfficientNetB0"]
           env:
             - name: LOG_LEVEL
-              value: "WARNING"
+              value: "INFO"
             - name: MANUAL_TRACING
               value: "true"
             - name: OTEL_ENDPOINT
-              value: "http://my-opentelemetry-collector.observe:4318/v1/traces"
+              value: "http://my-opentelemetry-collector.observe:4317"
           resources:
             requests:
               cpu: "300m"

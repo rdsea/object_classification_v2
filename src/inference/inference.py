@@ -50,7 +50,7 @@ try:
 except Exception as e:
     logging.error(f"Error loading config file: {e}")
     sys.exit(1)
-logging.info(f"Inference configuration: {config}")
+logging.debug(f"Inference configuration: {config}")
 
 chosen_model = ImageClassificationModelEnum[chosen_model]
 

@@ -5,6 +5,9 @@ debug=false
 PORT=5012
 CHOSEN_MODEL="MobileNetV2"
 
+export LOG_LEVEL=${LOG_LEVEL:-INFO}
+LOG_LEVEL_LOWER=$(echo "$LOG_LEVEL" | tr '[:upper:]' '[:lower:]')
+
 # Parse command line arguments
 while [[ "$#" -gt 0 ]]; do
   case $1 in
@@ -31,5 +34,5 @@ export CHOSEN_MODEL
 if [[ "$debug" == true ]]; then
   fastapi dev --host 0.0.0.0 --port "$PORT" inference.py
 else
-  uvicorn --host 0.0.0.0 --port "$PORT" inference:app
+  uvicorn --host 0.0.0.0 --port "$PORT" inference:app --log-level "$LOG_LEVEL_LOWER"
 fi
