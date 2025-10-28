@@ -1,0 +1,343 @@
+prometheus:
+  prometheusSpec:
+    # logLevel: debug
+    # Global scrape interval config
+    scrapeInterval: "1s"
+    retention: 1d
+    retentionSize: "17GiB"
+    routePrefix: /prometheus
+    externalUrl: /prometheus
+    externalLabels:
+      cluster: "edge-1"
+      environment: "edge"
+    # remoteWrite:
+    #   - url: "http://prom-kafka-adapter-node.redpanda.svc.cluster.local:80/receive"
+    #     name: prom-kafka-adapter-node
+    #   - url: "http://prom-kafka-adapter-service.redpanda.svc.cluster.local:80/receive"
+    #     name: prom-kafka-adapter-service
+    #   - url: "http://prom-kafka-adapter-pod.redpanda.svc.cluster.local:80/receive"
+    #     name: prom-kafka-adapter-pod
+    storageSpec:
+      ## Using PersistentVolumeClaim
+      volumeClaimTemplate:
+        spec:
+          storageClassName: longhorn
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 20Gi
+    selector: {}
+
+    additionalScrapeConfigs: |
+      - job_name: 'blackbox'
+        metrics_path: /probe
+        params:
+          module: [icmp]
+        kubernetes_sd_configs:
+        - role: pod
+          namespaces:
+            names: ['default']
+        relabel_configs:
+          - source_labels: [__address__]
+            regex: ([^:]+)(?::\d+)?
+            replacement: $1
+            target_label: __param_target
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: instance
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            target_label: service
+          - target_label: __address__
+            replacement: blackbox-exporter-prometheus-blackbox-exporter.observe:9115
+
+      - job_name: 'blackbox_exporter'
+        static_configs:
+          - targets: ['blackbox-exporter-prometheus-blackbox-exporter.observe:9115']
+
+      - job_name: 'cilium-metrics'
+        kubernetes_sd_configs:
+        - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: ${1}:${2}
+            target_label: __address__
+
+      - job_name: 'hubble-metrics'
+        kubernetes_sd_configs:
+          - role: endpoints
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels: [__address__, __meta_kubernetes_service_annotation_prometheus_io_port]
+            action: replace
+            target_label: __address__
+            regex: (.+)(?::\d+);(\d+)
+            replacement: $1:$2
+
+      - job_name: longhorn
+        honor_timestamps: true
+        track_timestamps_staleness: false
+        scrape_protocols:
+        - OpenMetricsText1.0.0
+        - OpenMetricsText0.0.1
+        - PrometheusText1.0.0
+        - PrometheusText0.0.4
+        convert_classic_histograms_to_nhcb: false
+        metrics_path: /metrics
+        scheme: http
+        enable_compression: true
+        metric_name_validation_scheme: utf8
+        metric_name_escaping_scheme: allow-utf-8
+        follow_redirects: true
+        enable_http2: true
+        relabel_configs:
+        - source_labels: [job]
+          separator: ;
+          target_label: __tmp_prometheus_job_name
+          replacement: $1
+          action: replace
+        - source_labels: [__meta_kubernetes_service_label_app, __meta_kubernetes_service_labelpresent_app]
+          separator: ;
+          regex: (longhorn-manager);true
+          replacement: $1
+          action: keep
+        - source_labels: [__meta_kubernetes_endpoint_port_name]
+          separator: ;
+          regex: manager
+          replacement: $1
+          action: keep
+        - source_labels: [__meta_kubernetes_endpoint_address_target_kind, __meta_kubernetes_endpoint_address_target_name]
+          separator: ;
+          regex: Node;(.*)
+          target_label: node
+          replacement: ${1}
+          action: replace
+        - source_labels: [__meta_kubernetes_endpoint_address_target_kind, __meta_kubernetes_endpoint_address_target_name]
+          separator: ;
+          regex: Pod;(.*)
+          target_label: pod
+          replacement: ${1}
+          action: replace
+        - source_labels: [__meta_kubernetes_namespace]
+          separator: ;
+          target_label: namespace
+          replacement: $1
+          action: replace
+        - source_labels: [__meta_kubernetes_service_name]
+          separator: ;
+          target_label: service
+          replacement: $1
+          action: replace
+        - source_labels: [__meta_kubernetes_pod_name]
+          separator: ;
+          target_label: pod
+          replacement: $1
+          action: replace
+        - source_labels: [__meta_kubernetes_pod_container_name]
+          separator: ;
+          target_label: container
+          replacement: $1
+          action: replace
+        - source_labels: [__meta_kubernetes_pod_phase]
+          separator: ;
+          regex: (Failed|Succeeded)
+          replacement: $1
+          action: drop
+        - source_labels: [__meta_kubernetes_service_name]
+          separator: ;
+          target_label: job
+          replacement: ${1}
+          action: replace
+        - separator: ;
+          target_label: endpoint
+          replacement: manager
+          action: replace
+        - source_labels: [__address__, __tmp_hash]
+          separator: ;
+          regex: (.+);
+          target_label: __tmp_hash
+          replacement: $1
+          action: replace
+        - source_labels: [__tmp_hash]
+          separator: ;
+          modulus: 1
+          target_label: __tmp_hash
+          replacement: $1
+          action: hashmod
+        - source_labels: [__tmp_hash, __tmp_disable_sharding]
+          separator: ;
+          regex: 0;|.+;.+
+          replacement: $1
+          action: keep
+        kubernetes_sd_configs:
+        - role: endpoints
+          kubeconfig_file: ""
+          follow_redirects: true
+          enable_http2: true
+          namespaces:
+            own_namespace: false
+            names:
+            - longhorn-system
+
+additionalPrometheusRulesMap:
+  anomaly-detection:
+    groups:
+      - name: spanmetrics_alias
+        interval: 2s
+        rules:
+          - record: latency_bucket
+            expr: latency_milliseconds_bucket
+          - record: calls_total
+            expr: traces_span_metrics_calls_total
+          - record: duration_milliseconds_bucket
+            expr: traces_span_metrics_duration_milliseconds_bucket
+
+      - name: AnomalyNodeExporter
+        rules:
+          - record: node:cpu_usage
+            expr: |-
+              sum by (instance) (
+                1 - sum without (mode) (
+                  rate(node_cpu_seconds_total{job="node-exporter", mode=~"idle|iowait|steal"}[1m])
+                )
+              )
+
+          - record: node:memory_usage_percentage
+            expr: |-
+              100 - (
+                node_memory_MemAvailable_bytes{job="node-exporter"} /
+                node_memory_MemTotal_bytes{job="node-exporter"} * 100
+              )
+
+          - record: node:disk_read
+            expr: |-
+              rate(node_disk_read_bytes_total{job="node-exporter", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)"}[1m])
+
+          - record: node:disk_written
+            expr: |-
+              rate(node_disk_written_bytes_total{job="node-exporter", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)"}[1m])
+
+          - record: node:disk_io_time
+            expr: |-
+              rate(node_disk_io_time_seconds_total{job="node-exporter", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)"}[1m])
+
+          - record: node:network_receive
+            expr: |-
+              rate(node_network_receive_bytes_total{job="node-exporter", device!="lo"}[1m]) * 8
+
+          - record: node:network_transmit
+            expr: |-
+              rate(node_network_transmit_bytes_total{job="node-exporter", device!="lo"}[1m]) * 8
+
+          - record: pod:cpu_usage
+            expr: |-
+              sum by (pod) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_rate5m{container!="",namespace="default",pod!=""})
+
+          - record: pod:memory_usage
+            expr: |-
+              sum(container_memory_working_set_bytes{job="kubelet", metrics_path="/metrics/cadvisor", namespace="default", container!="", image!=""}) by (pod)
+
+          - record: service:cpu_usage
+            expr: |-
+              sum(
+                  node_namespace_pod_container:container_cpu_usage_seconds_total:sum_rate5m{namespace="default"}
+                * on(namespace,pod)
+                  group_left(workload, workload_type) namespace_workload_pod:kube_pod_owner:relabel{namespace="default"}
+              ) by (workload)
+
+          - record: service:memory_usage
+            expr: |-
+              sum(
+                  container_memory_working_set_bytes{namespace="default", container!="", image!=""}
+                * on(namespace,pod)
+                  group_left(workload, workload_type) namespace_workload_pod:kube_pod_owner:relabel{ namespace="default"}
+              ) by (workload)
+
+          - record: service:network_receive
+            expr: |-
+              (sum(rate(container_network_receive_bytes_total{job="kubelet", metrics_path="/metrics/cadvisor",namespace="default"}[1m])
+              * on (namespace,pod)
+              group_left(workload,workload_type) namespace_workload_pod:kube_pod_owner:relabel{ namespace="default"}) by (workload))
+
+          - record: service:network_transmit
+            expr: |-
+              (sum(rate(container_network_transmit_bytes_total{job="kubelet", metrics_path="/metrics/cadvisor",namespace="default"}[1m])
+              * on (namespace,pod)
+              group_left(workload,workload_type) namespace_workload_pod:kube_pod_owner:relabel{ namespace="default"}) by (workload))
+
+          - record: service:rtt
+            expr: |-
+              avg by (service) (
+                quantile_over_time(0.95, probe_icmp_duration_seconds{phase="rtt"}[5m])
+              )
+
+          - record: service:socket
+            expr: |-
+              sum( container_sockets{namespace="default"} * on(namespace,pod) group_left(workload, workload_type) namespace_workload_pod:kube_pod_owner:relabel{namespace="default"}) by (workload)
+
+          - record: service:io
+            expr: |-
+              (sum(rate(container_blkio_device_usage_total{job="kubelet", metrics_path="/metrics/cadvisor",namespace="default"}[1m])
+              * on (namespace,pod)
+              group_left(workload,workload_type) namespace_workload_pod:kube_pod_owner:relabel{ namespace="default"}) by (workload)) > 0
+
+          - record: service:p95_latency
+            expr: |-
+              histogram_quantile( 0.95, sum( rate(duration_milliseconds_bucket[10m])) by (service_name, span_name, span_kind, le))
+
+          - record: service:p75_latency
+            expr: |-
+              histogram_quantile( 0.75, sum( rate(duration_milliseconds_bucket[10m])) by (service_name, span_name, span_kind, le))
+
+          - record: service:p50_latency
+            expr: |-
+              histogram_quantile( 0.50, sum( rate(duration_milliseconds_bucket[10m])) by (service_name, span_name, span_kind, le))
+
+          - record: service:request_rate_per_second
+            expr: |-
+              sum(rate(calls_total{span_kind =~ "SPAN_KIND_SERVER"}[10m])) by (service_name)
+
+          - record: service:error_rate
+            expr: |-
+              sum(rate(calls_total{status_code = "STATUS_CODE_ERROR", span_kind =~ "SPAN_KIND_SERVER"}[10m])) by (service_name,span_name) / sum(rate(calls_total{ span_kind =~ "SPAN_KIND_SERVER"}[10m])) by (service_name,span_name)
+# grafana:
+#   enabled: true
+#   namespaceOverride: "dashboard"
+#
+#   persistence:
+#     type: pvc
+#     storageClassName: "longhorn"
+#     enabled: true
+#     size: 5Gi
+#
+#   adminUser: admin
+#   adminPassword: adminadminadmin
+#
+#   additionalDataSources:
+#     - name: Loki
+#       type: loki
+#       url: http://loki-gateway.observe.svc.cluster.local:80
+#       access: proxy
+#       isDefault: false
+#       orgId: ""
+#
+#   grafana.ini:
+#     server:
+#       root_url: "%(protocol)s://%(domain)s/grafana/"
+#       serve_from_sub_path: true
+
+prometheus-node-exporter:
+  prometheus:
+    monitor:
+      relabelings:
+        - sourceLabels: [__meta_kubernetes_pod_node_name]
+          separator: ;
+          regex: ^(.*)$
+          targetLabel: instance
+          replacement: $1
+          action: replace

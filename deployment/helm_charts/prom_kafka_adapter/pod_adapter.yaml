@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prom-kafka-adapter-pod
+  labels:
+    app: prom-kafka-adapter-pod
+  namespace: redpanda
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prom-kafka-adapter-pod
+  template:
+    metadata:
+      labels:
+        app: prom-kafka-adapter-pod
+    spec:
+      containers:
+        - name: adapter
+          image: telefonica/prometheus-kafka-adapter:1.9.1
+          ports:
+            - containerPort: 8080
+          env:
+            - name: KAFKA_BROKER_LIST
+              value: "redpanda-0.redpanda.redpanda.svc.cluster.local:9093, redpanda-1.redpanda.redpanda.svc.cluster.local:9093, redpanda-2.redpanda.redpanda.svc.cluster.local:9093"
+            - name: KAFKA_TOPIC
+              value: "pod_metric" # Change to your topic
+            - name: MATCH
+              value: '[ "pod:cpu_usage", "pod:memory_usage", ]'
+            - name: LOG_LEVEL
+              value: "info"
+            - name: KAFKA_SECURITY_PROTOCOL
+              value: "SASL_SSL"
+            - name: KAFKA_SASL_MECHANISM
+              value: "PLAIN"
+            - name: KAFKA_SASL_USERNAME
+              value: "alice"
+            - name: KAFKA_SASL_PASSWORD
+              value: "redpanda"
+            - name: KAFKA_SSL_CA_CERT_FILE
+              value: "/etc/tls/certs/ca.crt"
+          volumeMounts:
+            - name: tls-certs
+              mountPath: /etc/tls/certs
+              readOnly: true
+      volumes:
+        - name: tls-certs
+          secret:
+            secretName: redpanda-default-cert
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prom-kafka-adapter-pod
+  namespace: redpanda
+spec:
+  selector:
+    app: prom-kafka-adapter-pod
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080

@@ -1,0 +1,82 @@
+---
+storage:
+  trace:
+    backend: s3
+    s3:
+      access_key: "grafana-tempo"
+      secret_key: "supersecret"
+      bucket: "tempo-traces"
+      endpoint: "tempo-minio:9000"
+      insecure: true
+# MinIO storage configuration
+# Note: MinIO should not be used for production environments. This is for demonstration purposes only.
+minio:
+  enabled: true
+  mode: standalone
+  rootUser: grafana-tempo
+  rootPassword: supersecret
+  buckets:
+    # Default Tempo storage bucket
+    - name: tempo-traces
+      policy: none
+      purge: false
+  persistence:
+    enabled: true
+    storageClass: longhorn
+    accessModes: ["ReadWriteOnce"]
+    size: 10Gi
+
+# Specifies which trace protocols to accept by the gateway.
+traces:
+  otlp:
+    grpc:
+      enabled: true
+    http:
+      enabled: true
+  zipkin:
+    enabled: false
+  jaeger:
+    thriftHttp:
+      enabled: false
+  opencensus:
+    enabled: false
+
+metricsGenerator:
+  enabled: true
+  extraEnv:
+    - name: MY_POD_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.podIP
+  extraArgs:
+    - -config.expand-env=true
+  config:
+    storage:
+      remote_write:
+        - url: http://prometheus-kube-prometheus-prometheus:9090/prometheus/api/v1/write
+          send_exemplars: true
+
+overrides:
+  defaults:
+    metrics_generator:
+      processors: [service-graphs, span-metrics]
+
+ingester:
+  replicas: 3
+
+distributor:
+  service:
+    annotations:
+      io.cilium/global-service: "true"
+
+memberlist:
+  bind_addr:
+    - ${MY_POD_IP}
+global:
+  extraArgs:
+    - -config.expand-env=true
+  extraEnv:
+    - name: MY_POD_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.podIP

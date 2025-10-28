@@ -1,0 +1,41 @@
+image:
+  repository: otel/opentelemetry-collector-contrib
+  tag: latest
+
+mode: deployment
+
+config:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+
+  # processors:
+  #   batch:
+
+  exporters:
+    otlp:
+      endpoint: http://tempo-distributor.observe:4317
+      tls:
+        insecure: true
+    otlphttp:
+      endpoint: http://loki-gateway.observe/otlp
+
+  service:
+    # extensions: [health_check, pprof, zpages]
+    pipelines:
+      traces:
+        receivers: [otlp]
+        processors: [batch]
+        exporters: [otlp]
+      logs:
+        receivers: [otlp]
+        processors: [batch]
+        exporters: [otlphttp]
+
+ports:
+  metrics:
+    enabled: false

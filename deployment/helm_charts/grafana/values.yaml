@@ -1,0 +1,43 @@
+---
+persistence:
+  type: pvc
+  enabled: true
+
+# DO NOT DO THIS IN PRODUCTION USECASES
+adminUser: admin
+adminPassword: adminadminadmin
+# CONSIDER USING AN EXISTING SECRET
+# Use an existing secret for the admin user.
+# admin:
+## Name of the secret. Can be templated.
+#  existingSecret: ""
+#  userKey: admin-user
+#  passwordKey: admin-password
+
+service:
+  enabled: true
+  type: ClusterIP
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        url: http://prometheus-server.observe.svc.cluster.local
+        access: proxy
+        isDefault: true
+      - name: Loki
+        type: loki
+        url: http://loki-gateway.observe.svc.cluster.local:80
+        access: proxy
+        isDefault: false
+        orgId: ""
+
+grafana.ini:
+  server:
+    root_url: "%(protocol)s://%(domain)s/grafana/"
+    serve_from_sub_path: true
+
+plugins:
+  - isovalent-hubble-datasource
