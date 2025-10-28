@@ -2,7 +2,7 @@ prometheus:
   prometheusSpec:
     # logLevel: debug
     # Global scrape interval config
-    scrapeInterval: "1s"
+    scrapeInterval: "15s"
     retention: 1d
     retentionSize: "17GiB"
     routePrefix: /prometheus

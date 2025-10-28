@@ -80,3 +80,7 @@ global:
       valueFrom:
         fieldRef:
           fieldPath: status.podIP
+
+queryFrontend:
+  service:
+    type: LoadBalancer

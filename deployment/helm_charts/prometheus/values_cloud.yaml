@@ -2,7 +2,7 @@ prometheus:
   prometheusSpec:
     # logLevel: debug
     # Global scrape interval config
-    scrapeInterval: "1s"
+    scrapeInterval: "15s"
     retention: 1d
     retentionSize: "18GiB"
     routePrefix: /prometheus
@@ -12,15 +12,7 @@ prometheus:
     externalLabels:
       cluster: cloud-1
       environment: cloud
-    # remoteWrite:
-    #   - url: "http://prom-kafka-adapter-node.redpanda.svc.cluster.local:80/receive"
-    #     name: prom-kafka-adapter-node
-    #   - url: "http://prom-kafka-adapter-service.redpanda.svc.cluster.local:80/receive"
-    #     name: prom-kafka-adapter-service
-    #   - url: "http://prom-kafka-adapter-pod.redpanda.svc.cluster.local:80/receive"
-    #     name: prom-kafka-adapter-pod
     storageSpec:
-      ## Using PersistentVolumeClaim
       volumeClaimTemplate:
         spec:
           storageClassName: longhorn
