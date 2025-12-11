@@ -39,14 +39,38 @@ if os.environ.get("MANUAL_TRACING"):
 
     tracer = trace.get_tracer(__name__)
 
-ENSEMBLE_SERVICE_URL = "http://ensemble.ziti-controller.private:5011/ensemble_service"
-if os.environ.get("DOCKER"):
-    ENSEMBLE_SERVICE_URL = "http://ensemble:5011/ensemble_service"
 
-if os.environ.get("OPENZITI"):
+def is_env_true(var_name):
+    value = os.environ.get(var_name, "false").lower()
+    return value in ("true", "1", "yes", "on", "t")
+
+
+# ENSEMBLE_SERVICE_URL = "http://ensemble.ziti-controller.private:5011/ensemble_service"
+ENSEMBLE_SERVICE_URL = ""
+if is_env_true("OPENZITI"):
+    # Runs ONLY if OPENZITI is "true", "True", "1", etc.
     ENSEMBLE_SERVICE_URL = (
         "http://ensemble.ziti-controller.private:5011/ensemble_service"
     )
+    print("Configuring for OpenZiti Overlay")
+
+elif is_env_true("DOCKER"):
+    # Runs if OPENZITI is false/unset AND DOCKER is "true"
+    ENSEMBLE_SERVICE_URL = "http://ensemble:5011/ensemble_service"
+    print("Configuring for Docker Network")
+
+else:
+    # Fallback (e.g., for local testing without Docker/Ziti)
+    ENSEMBLE_SERVICE_URL = "http://localhost:5011/ensemble_service"
+    print("Configuring for Localhost")
+
+# if os.environ.get("DOCKER"):
+#     ENSEMBLE_SERVICE_URL = "http://ensemble:5011/ensemble_service"
+#
+# if os.environ.get("OPENZITI"):
+#     ENSEMBLE_SERVICE_URL = (
+#         "http://ensemble.ziti-controller.private:5011/ensemble_service"
+#     )
 
 
 current_directory = os.path.dirname(os.path.abspath(__file__))
