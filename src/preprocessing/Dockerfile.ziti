@@ -1,8 +1,8 @@
 FROM rdsea/debian-slim-opencv:latest
 
-RUN apt update
-
-RUN apt install curl gpg -y
+RUN apt-get update --allow-releaseinfo-change \
+  && apt-get install -y curl gpg \
+  && rm -rf /var/lib/apt/lists/*
 
 RUN curl -sSLf https://get.openziti.io/tun/package-repos.gpg | gpg --dearmor --output /usr/share/keyrings/openziti.gpg
 
@@ -10,9 +10,18 @@ RUN chmod -c +r /usr/share/keyrings/openziti.gpg
 
 RUN echo "deb [signed-by=/usr/share/keyrings/openziti.gpg] https://packages.openziti.org/zitipax-openziti-deb-stable jammy main" | tee /etc/apt/sources.list.d/openziti.list >/dev/null
 
-RUN apt update
+RUN apt-get update --allow-releaseinfo-change \
+  && apt-get install -y ziti-edge-tunnel \
+  && rm -rf /var/lib/apt/lists/*
 
-RUN apt install -y ziti-edge-tunnel
+# RUN curl -sSLf https://get.openziti.io/tun/package-repos.gpg | gpg --dearmor --output /usr/share/keyrings/openziti.gpg
+#
+# RUN chmod -c +r /usr/share/keyrings/openziti.gpg
+#
+# RUN echo "deb [signed-by=/usr/share/keyrings/openziti.gpg] https://packages.openziti.org/zitipax-openziti-deb-stable jammy main" | tee /etc/apt/sources.list.d/openziti.list >/dev/null
+#
+# RUN apt update
+#
 
 WORKDIR /image_preprocessing/preprocessing
 
