@@ -105,31 +105,22 @@ INFERENCE_SERVICE_URLS = ""
 RABBITMQ_URL = ""
 
 if is_env_true("OPENZITI"):
-    # Runs ONLY if OPENZITI is "true", "True", "1", etc.
     INFERENCE_SERVICE_URLS = get_inference_service_url_openziti(config["ensemble"])
-    try:
-        # This will CRASH if RABBITMQ_URL is not set
-        rabbitmq_url = os.environ["RABBITMQ_URL"]
-    except KeyError:
-        print("Error: The environment variable 'RABBITMQ_URL' is required but not set.")
-        exit(1)
-    # RABBITMQ_URL = get_rabbitmq_connection_url_openziti(config)
+    rabbit_host = os.environ["RABBITMQ_URL"]
+    rabbit_user = os.environ["RABBIT_USERNAME"]
+    rabbit_pass = os.environ["RABBIT_PASSWORD"]
+    RABBITMQ_URL = f"amqp://{rabbit_user}:{rabbit_pass}@{rabbit_host}/"
     print("Configuring for OpenZiti Overlay")
 
 elif is_env_true("DOCKER"):
-    # Runs if OPENZITI is false/unset AND DOCKER is "true"
     INFERENCE_SERVICE_URLS = get_inference_service_url_docker(config["ensemble"])
-    # RABBITMQ_URL = get_rabbitmq_connection_url(config)
-    try:
-        # This will CRASH if RABBITMQ_URL is not set
-        rabbitmq_url = os.environ["RABBITMQ_URL"]
-    except KeyError:
-        print("Error: The environment variable 'RABBITMQ_URL' is required but not set.")
-        exit(1)
+    rabbit_host = os.environ["RABBITMQ_URL"]
+    rabbit_user = os.environ["RABBIT_USERNAME"]
+    rabbit_pass = os.environ["RABBIT_PASSWORD"]
+    RABBITMQ_URL = f"amqp://{rabbit_user}:{rabbit_pass}@{rabbit_host}/"
     print("Configuring for Docker Network")
 
 else:
-    # Fallback (e.g., for local testing without Docker/Ziti)
     ENSEMBLE_SERVICE_URL = "http://localhost:5011/ensemble_service"
     RABBITMQ_URL = get_rabbitmq_connection_url(config)
     print("Configuring for Localhost")
