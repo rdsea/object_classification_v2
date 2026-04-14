@@ -200,6 +200,15 @@ async def processing_image(file: UploadFile, request: Request):
 
     logging.info("Image preprocessing took %.2f ms", processing_time_ms)
 
+    if processed_image.shape != (224, 224, 3):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Processed image has unexpected shape: {processed_image.shape}",
+        )
+
+    if processed_image.dtype != np.uint8:
+        processed_image = processed_image.astype(np.uint8)
+
     image_bytes = processed_image.tobytes()
     request_id = str(uuid4())
 
