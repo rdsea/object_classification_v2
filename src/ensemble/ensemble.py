@@ -98,32 +98,51 @@ def is_env_true(var_name):
     return value in ("true", "1", "yes", "on", "t")
 
 
-# INFERENCE_SERVICE_URLS = get_inference_service_url(config["ensemble"])
-INFERENCE_SERVICE_URLS = ""
+def get_required_env(name: str) -> str:
+    value = os.environ.get(name)
+    if not value:
+        raise RuntimeError(f"Missing required environment variable: {name}")
+    return value
 
+
+def build_amqp_url_from_env(default_port: str = "5672") -> str:
+    host = get_required_env("RABBITMQ_URL").strip()
+    user = get_required_env("RABBIT_USERNAME").strip()
+    password = get_required_env("RABBIT_PASSWORD").strip()
+    port = os.environ.get("RABBITMQ_PORT", default_port).strip()
+
+    return f"amqp://{user}:{password}@{host}:{port}/"
+
+
+def build_amqp_url_from_config(cfg: dict) -> str:
+    rabbitmq_cfg = cfg["rabbitmq"]
+    host = rabbitmq_cfg["url"]
+    user = rabbitmq_cfg["username"]
+    password = rabbitmq_cfg["password"]
+    port = str(rabbitmq_cfg.get("port", 5672))
+    return f"amqp://{user}:{password}@{host}:{port}/"
+
+
+# INFERENCE_SERVICE_URLS = get_inference_service_url(config["ensemble"])
 # RABBITMQ_URL = get_rabbitmq_connection_url(config)
-RABBITMQ_URL = ""
+
+INFERENCE_SERVICE_URLS: list[str] = []
+RABBITMQ_URL: str = ""
 
 if is_env_true("OPENZITI"):
     INFERENCE_SERVICE_URLS = get_inference_service_url_openziti(config["ensemble"])
-    rabbit_host = os.environ["RABBITMQ_URL"]
-    rabbit_user = os.environ["RABBIT_USERNAME"]
-    rabbit_pass = os.environ["RABBIT_PASSWORD"]
-    RABBITMQ_URL = f"amqp://{rabbit_user}:{rabbit_pass}@{rabbit_host}/"
-    print("Configuring for OpenZiti Overlay")
+    RABBITMQ_URL = build_amqp_url_from_env("5672")
+    print(f"Configuring for OpenZiti Overlay: {RABBITMQ_URL}")
 
 elif is_env_true("DOCKER"):
     INFERENCE_SERVICE_URLS = get_inference_service_url_docker(config["ensemble"])
-    rabbit_host = os.environ["RABBITMQ_URL"]
-    rabbit_user = os.environ["RABBIT_USERNAME"]
-    rabbit_pass = os.environ["RABBIT_PASSWORD"]
-    RABBITMQ_URL = f"amqp://{rabbit_user}:{rabbit_pass}@{rabbit_host}/"
-    print("Configuring for Docker Network")
+    RABBITMQ_URL = build_amqp_url_from_env("5672")
+    print(f"Configuring for Docker Network: {RABBITMQ_URL}")
 
 else:
-    ENSEMBLE_SERVICE_URL = "http://localhost:5011/ensemble_service"
-    RABBITMQ_URL = get_rabbitmq_connection_url(config)
-    print("Configuring for Localhost")
+    INFERENCE_SERVICE_URLS = get_inference_service_url(config["ensemble"])
+    RABBITMQ_URL = build_amqp_url_from_config(config)
+    print(f"Configuring for Localhost: {RABBITMQ_URL}")
 
 
 # if os.environ.get("DOCKER"):
