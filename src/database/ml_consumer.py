@@ -9,6 +9,7 @@ from multiprocessing import Process, current_process
 import aio_pika
 import yaml
 from motor.motor_asyncio import AsyncIOMotorClient
+from pathlib import Path
 
 MAX_RETRIES = 10
 INITIAL_DELAY = 2
@@ -16,7 +17,14 @@ MAX_DELAY = 60
 NUM_PROCESSES = 4
 
 # Load config once
-with open("config.yaml") as f:
+# with open("~/config.yaml") as f:
+
+# config_path = os.path.expanduser("~/config.yaml")
+# with open(config_path) as f:
+#     ml_consumer_config = yaml.safe_load(f)
+
+config_path = Path("~/config.yaml").expanduser()
+with open(config_path) as f:
     ml_consumer_config = yaml.safe_load(f)
 
 
@@ -29,24 +37,27 @@ def get_mongodb_connection_url(config):
 
 
 def get_rabbitmq_connection_url_openziti(config):
-    return f"amqp://{config['rabbitmq']['username']}:{config['rabbitmq']['password']}@{config['rabbitmq']['url']}"
+    return f"amqp://{config['rabbitmq']['username']}:{config['rabbitmq']['password']}@{config['rabbitmq']['url']}.ziti-controller.private"
 
 
 def get_mongodb_connection_url_openziti(config):
     return f"mongodb://{config['mongodb']['username']}:{config['mongodb']['password']}@{config['mongodb']['url']}.ziti-controller.private"
 
 
-if os.environ.get("OPENZITI"):
-    RABBITMQ_URL = get_rabbitmq_connection_url_openziti(ml_consumer_config)
-    MONGODB_URI = get_mongodb_connection_url_openziti(ml_consumer_config)
-else:
-    RABBITMQ_URL = get_rabbitmq_connection_url(ml_consumer_config)
-    MONGODB_URI = get_mongodb_connection_url(ml_consumer_config)
+# if os.environ.get("OPENZITI"):
+#     RABBITMQ_URL = get_rabbitmq_connection_url_openziti(ml_consumer_config)
+#     MONGODB_URI = get_mongodb_connection_url_openziti(ml_consumer_config)
+# else:
+#     RABBITMQ_URL = get_rabbitmq_connection_url(ml_consumer_config)
+#     MONGODB_URI = get_mongodb_connection_url(ml_consumer_config)
 
 QUEUE_NAME = ml_consumer_config["rabbitmq"]["queue_name"]
 
-DB_NAME = "object-detection"
-COLLECTION_NAME = "results"
+RABBITMQ_URL = get_rabbitmq_connection_url(ml_consumer_config)
+MONGODB_URI = get_mongodb_connection_url(ml_consumer_config)
+
+DB_NAME = ml_consumer_config["rabbitmq"]["db"]
+COLLECTION_NAME = ml_consumer_config["rabbitmq"]["collection"]
 
 logging.basicConfig(level=logging.INFO)
 
