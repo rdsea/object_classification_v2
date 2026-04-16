@@ -56,8 +56,8 @@ QUEUE_NAME = ml_consumer_config["rabbitmq"]["queue_name"]
 RABBITMQ_URL = get_rabbitmq_connection_url(ml_consumer_config)
 MONGODB_URI = get_mongodb_connection_url(ml_consumer_config)
 
-DB_NAME = ml_consumer_config["rabbitmq"]["db"]
-COLLECTION_NAME = ml_consumer_config["rabbitmq"]["collection"]
+DB_NAME = ml_consumer_config["mongodb"]["db"]
+COLLECTION_NAME = ml_consumer_config["mongodb"]["collection"]
 
 logging.basicConfig(level=logging.INFO)
 
