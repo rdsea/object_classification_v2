@@ -5,7 +5,7 @@ import os
 import sys
 import time
 from multiprocessing import Process, current_process
-
+from urllib.parse import quote_plus
 import aio_pika
 import yaml
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -32,16 +32,25 @@ def get_rabbitmq_connection_url(config):
     return f"amqp://{config['rabbitmq']['username']}:{config['rabbitmq']['password']}@{config['rabbitmq']['url']}"
 
 
+# def get_mongodb_connection_url(config):
+#     return f"mongodb://{config['mongodb']['username']}:{config['mongodb']['password']}@{config['mongodb']['url']}"
+
+
 def get_mongodb_connection_url(config):
-    return f"mongodb://{config['mongodb']['username']}:{config['mongodb']['password']}@{config['mongodb']['url']}"
+    username = quote_plus(config["mongodb"]["username"])
+    password = quote_plus(config["mongodb"]["password"])
+    host = config["mongodb"]["url"]
+    db = config["mongodb"]["db"]
+
+    return f"mongodb://{username}:{password}@{host}/{db}?authSource=admin"
 
 
-def get_rabbitmq_connection_url_openziti(config):
-    return f"amqp://{config['rabbitmq']['username']}:{config['rabbitmq']['password']}@{config['rabbitmq']['url']}.ziti-controller.private"
-
-
-def get_mongodb_connection_url_openziti(config):
-    return f"mongodb://{config['mongodb']['username']}:{config['mongodb']['password']}@{config['mongodb']['url']}.ziti-controller.private"
+# def get_rabbitmq_connection_url_openziti(config):
+#     return f"amqp://{config['rabbitmq']['username']}:{config['rabbitmq']['password']}@{config['rabbitmq']['url']}.ziti-controller.private"
+#
+#
+# def get_mongodb_connection_url_openziti(config):
+#     return f"mongodb://{config['mongodb']['username']}:{config['mongodb']['password']}@{config['mongodb']['url']}.ziti-controller.private"
 
 
 # if os.environ.get("OPENZITI"):
