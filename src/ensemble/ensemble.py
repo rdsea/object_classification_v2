@@ -7,6 +7,7 @@ import os
 import sys
 from contextlib import asynccontextmanager
 from typing import Annotated
+import time
 
 import aio_pika
 import aiohttp
@@ -216,6 +217,7 @@ async def process_image_task(
         # Run ensemble function on the results
         final_result = chosen_ensemble_function(results, request_id)
         final_result["Timestamp"] = timestamp
+        final_result["queue_publish_time"] = time.time()
         logging.info(f"Ensembled result: {final_result}")
 
         queue_name = app.state.config["rabbitmq"]["queue_name"]
@@ -226,6 +228,18 @@ async def process_image_task(
             message = aio_pika.Message(body=message_body)
             await channel.default_exchange.publish(message, routing_key=queue_name)
             logging.info(f"Sent result to RabbitMQ queue {queue_name}")
+        # final_result = chosen_ensemble_function(results, request_id)
+        # final_result["Timestamp"] = timestamp
+        # logging.info(f"Ensembled result: {final_result}")
+        #
+        # queue_name = app.state.config["rabbitmq"]["queue_name"]
+        # if SEND_TO_QUEUE:
+        #     channel = app.state.rabbitmq_channel
+        #     queue_name = app.state.config["rabbitmq"]["queue_name"]
+        #     message_body = json.dumps(final_result).encode()
+        #     message = aio_pika.Message(body=message_body)
+        #     await channel.default_exchange.publish(message, routing_key=queue_name)
+        #     logging.info(f"Sent result to RabbitMQ queue {queue_name}")
 
 
 @app.post("/ensemble_service")
