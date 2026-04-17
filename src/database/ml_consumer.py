@@ -100,6 +100,14 @@ if os.environ.get("MANUAL_TRACING"):
 else:
     tracer = None  # Fallback if tracing is not enabled
 
+# add capture time management
+body = message.body.decode()
+data = json.loads(body)
+
+consumer_receive_time = time.time()
+data["consumer_receive_time"] = consumer_receive_time
+
+insert_start_time = time.time()
 
 async def process_message(message: aio_pika.IncomingMessage, collection):
     async with message.process():
@@ -120,24 +128,68 @@ async def process_message(message: aio_pika.IncomingMessage, collection):
                     span.set_attribute(
                         "document.timestamp", data.get("Timestamp", "unknown")
                     )
-
+                    
+                    # adding more check from consumer time
                     logging.info(f"{current_process().name} received: {data}")
                     result = await collection.insert_one(data)
+
+                    db_insert_done_time = time.time()
+                    db_write_latency_ms = (db_insert_done_time - insert_start_time) * 1000.0
+
+                    await collection.update_one(
+                        {"_id": result.inserted_id},
+                        {
+                            "$set": {
+                                "db_insert_done_time": db_insert_done_time,
+                                "Endtime": db_insert_done_time,
+                                "db_write_latency_ms": db_write_latency_ms,
+                            }
+                        },
+                    )
+
                     logging.info(
                         f"{current_process().name} inserted ID: {result.inserted_id}"
                     )
                     span.set_attribute("mongodb.inserted_id", str(result.inserted_id))
+                    span.set_attribute("db_write_latency_ms", db_write_latency_ms)
             else:
                 logging.info(f"{current_process().name} received: {data}")
                 result = await collection.insert_one(data)
+
+                db_insert_done_time = time.time()
+                db_write_latency_ms = (db_insert_done_time - insert_start_time) * 1000.0
+
+                await collection.update_one(
+                    {"_id": result.inserted_id},
+                    {
+                        "$set": {
+                            "db_insert_done_time": db_insert_done_time,
+                            "Endtime": db_insert_done_time,
+                            "db_write_latency_ms": db_write_latency_ms,
+                        }
+                    },
+                )
+
                 logging.info(
                     f"{current_process().name} inserted ID: {result.inserted_id}"
                 )
-
-        except Exception as e:
-            logging.error(f"Error: {e}")
-            if tracer:
-                span.record_exception(e)
+        #             logging.info(f"{current_process().name} received: {data}")
+        #             result = await collection.insert_one(data)
+        #             logging.info(
+        #                 f"{current_process().name} inserted ID: {result.inserted_id}"
+        #             )
+        #             span.set_attribute("mongodb.inserted_id", str(result.inserted_id))
+        #     else:
+        #         logging.info(f"{current_process().name} received: {data}")
+        #         result = await collection.insert_one(data)
+        #         logging.info(
+        #             f"{current_process().name} inserted ID: {result.inserted_id}"
+        #         )
+        #
+        # except Exception as e:
+        #     logging.error(f"Error: {e}")
+        #     if tracer:
+        #         span.record_exception(e)
 
 
 async def consume():
