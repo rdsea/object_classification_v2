@@ -31,27 +31,30 @@ class Settings:
         self.openziti_enabled: bool = is_env_true("OPENZITI")
         self.manual_tracing: bool = is_env_true("MANUAL_TRACING")
         self.send_to_queue: bool = is_env_true("SEND_TO_QUEUE")
-        self.connect_url: str = os.environ.get(
-            "CONNECT_URL",
-            "http://localhost:5011/ensemble_service",
+        self.next_service_url: str = os.environ.get(
+            "NEXT_SERVICE_URL",
+            os.environ.get(
+                "CONNECT_URL",
+                "http://localhost:5011/ensemble_service",
+            ),
         ).strip()
         self.otel_endpoint: Optional[str] = os.environ.get("OTEL_ENDPOINT")
         self.request_timeout_seconds: float = float(
             os.environ.get("REQUEST_TIMEOUT_SECONDS", "10")
         )
 
-        if not self.connect_url:
-            raise RuntimeError("CONNECT_URL is empty or not set")
+        if not self.next_service_url:
+            raise RuntimeError("NEXT_SERVICE_URL / CONNECT_URL is empty or not set")
 
         if self.manual_tracing and not self.otel_endpoint:
             raise RuntimeError("MANUAL_TRACING is enabled but OTEL_ENDPOINT is not set")
 
     def log_summary(self) -> None:
         logging.info(
-            "Service configuration: openziti_enabled=%s, manual_tracing=%s, connect_url=%s, send_to_queue=%s, timeout=%s",
+            "Service configuration: openziti_enabled=%s, manual_tracing=%s, next_service_url=%s, send_to_queue=%s, timeout=%s",
             self.openziti_enabled,
             self.manual_tracing,
-            self.connect_url,
+            self.next_service_url,
             self.send_to_queue,
             self.request_timeout_seconds,
         )
@@ -173,7 +176,7 @@ async def get_test():
     response = {
         "response": "This is processing service controller",
         "openziti_enabled": settings.openziti_enabled,
-        "connect_url": settings.connect_url,
+        "next_service_url": settings.next_service_url,
     }
     return JSONResponse(content=response, status_code=200)
 
@@ -223,11 +226,11 @@ async def processing_image(file: UploadFile, request: Request):
 
         async with aiohttp.ClientSession(timeout=timeout) as session:
             logging.info(
-                "Sending request_id=%s to %s", request_id, settings.connect_url
+                "Sending request_id=%s to %s", request_id, settings.next_service_url
             )
 
             async with session.post(
-                url=settings.connect_url,
+                url=settings.next_service_url,
                 headers=headers,
                 data=image_bytes,
                 params={"request_id": request_id},
