@@ -44,7 +44,6 @@ if os.environ.get("MANUAL_TRACING"):
 
     tracer = trace.get_tracer(__name__)
 
-SEND_TO_QUEUE = os.environ.get("SEND_TO_QUEUE", "false").lower() == "true"
 
 current_directory = os.path.dirname(os.path.abspath(__file__))
 util_directory = os.path.join(current_directory, "..", "util")
@@ -63,87 +62,89 @@ assert config is not None
 logging.debug(f"Ensemble Service configuration: {config}")
 
 
-def get_inference_service_url(ensemble_chosen: list[str]):
-    return [f"http://{item.lower()}-service:5012/inference" for item in ensemble_chosen]
+# def get_inference_service_url(ensemble_chosen: list[str]):
+#     return [f"http://{item.lower()}-service:5012/inference" for item in ensemble_chosen]
+#
+#
+# def get_inference_service_url_docker(ensemble_chosen: list[str]):
+#     return [f"http://{item.lower()}:5012/inference" for item in ensemble_chosen]
+#
+#
+# def get_inference_service_url_openziti(ensemble_chosen: list[str]):
+#     return [
+#         f"http://{item.lower()}.ziti-controller.private:5012/inference"
+#         for item in ensemble_chosen
+#     ]
+#
+#
+# def get_rabbitmq_connection_url(config: dict):
+#     rabbitmq_url = config["rabbitmq"]["url"]  # Example config
+#     username = config["rabbitmq"]["username"]
+#     password = config["rabbitmq"]["password"]
+#     return f"amqp://{username}:{password}@{rabbitmq_url}"
 
 
-def get_inference_service_url_docker(ensemble_chosen: list[str]):
-    return [f"http://{item.lower()}:5012/inference" for item in ensemble_chosen]
-
-
-def get_inference_service_url_openziti(ensemble_chosen: list[str]):
-    return [
-        f"http://{item.lower()}.ziti-controller.private:5012/inference"
-        for item in ensemble_chosen
-    ]
-
-
-def get_rabbitmq_connection_url(config: dict):
-    rabbitmq_url = config["rabbitmq"]["url"]  # Example config
-    username = config["rabbitmq"]["username"]
-    password = config["rabbitmq"]["password"]
-    return f"amqp://{username}:{password}@{rabbitmq_url}"
-
-
-def get_rabbitmq_connection_url_openziti(config: dict):
-    rabbitmq_url = (
-        f"{config['rabbitmq']['url']}.ziti-controller.private"  # Example config
-    )
-    username = config["rabbitmq"]["username"]
-    password = config["rabbitmq"]["password"]
-    return f"amqp://{username}:{password}@{rabbitmq_url}"
-
-
-def is_env_true(var_name):
-    value = os.environ.get(var_name, "false").lower()
-    return value in ("true", "1", "yes", "on", "t")
-
-
-def get_required_env(name: str) -> str:
-    value = os.environ.get(name)
-    if not value:
-        raise RuntimeError(f"Missing required environment variable: {name}")
-    return value
-
-
-def build_amqp_url_from_env(default_port: str = "5672") -> str:
-    host = get_required_env("RABBITMQ_URL").strip()
-    user = get_required_env("RABBIT_USERNAME").strip()
-    password = get_required_env("RABBIT_PASSWORD").strip()
-    port = os.environ.get("RABBITMQ_PORT", default_port).strip()
-
-    return f"amqp://{user}:{password}@{host}:{port}/"
-
-
-def build_amqp_url_from_config(cfg: dict) -> str:
-    rabbitmq_cfg = cfg["rabbitmq"]
-    host = rabbitmq_cfg["url"]
-    user = rabbitmq_cfg["username"]
-    password = rabbitmq_cfg["password"]
-    port = str(rabbitmq_cfg.get("port", 5672))
-    return f"amqp://{user}:{password}@{host}:{port}/"
+#
+#
+# def get_rabbitmq_connection_url_openziti(config: dict):
+#     rabbitmq_url = (
+#         f"{config['rabbitmq']['url']}.ziti-controller.private"  # Example config
+#     )
+#     username = config["rabbitmq"]["username"]
+#     password = config["rabbitmq"]["password"]
+#     return f"amqp://{username}:{password}@{rabbitmq_url}"
+#
+#
+# def is_env_true(var_name):
+#     value = os.environ.get(var_name, "false").lower()
+#     return value in ("true", "1", "yes", "on", "t")
+#
+#
+# def get_required_env(name: str) -> str:
+#     value = os.environ.get(name)
+#     if not value:
+#         raise RuntimeError(f"Missing required environment variable: {name}")
+#     return value
+#
+#
+# def build_amqp_url_from_env(default_port: str = "5672") -> str:
+#     host = get_required_env("RABBITMQ_URL").strip()
+#     user = get_required_env("RABBIT_USERNAME").strip()
+#     password = get_required_env("RABBIT_PASSWORD").strip()
+#     port = os.environ.get("RABBITMQ_PORT", default_port).strip()
+#
+#     return f"amqp://{user}:{password}@{host}:{port}/"
+#
+#
+# def build_amqp_url_from_config(cfg: dict) -> str:
+#     rabbitmq_cfg = cfg["rabbitmq"]
+#     host = rabbitmq_cfg["url"]
+#     user = rabbitmq_cfg["username"]
+#     password = rabbitmq_cfg["password"]
+#     port = str(rabbitmq_cfg.get("port", 5672))
+#     return f"amqp://{user}:{password}@{host}:{port}/"
 
 
 # INFERENCE_SERVICE_URLS = get_inference_service_url(config["ensemble"])
 # RABBITMQ_URL = get_rabbitmq_connection_url(config)
 
-INFERENCE_SERVICE_URLS: list[str] = []
-RABBITMQ_URL: str = ""
-
-if is_env_true("OPENZITI"):
-    INFERENCE_SERVICE_URLS = get_inference_service_url_openziti(config["ensemble"])
-    RABBITMQ_URL = build_amqp_url_from_env("5672")
-    print(f"Configuring for OpenZiti Overlay: {RABBITMQ_URL}")
-
-elif is_env_true("DOCKER"):
-    INFERENCE_SERVICE_URLS = get_inference_service_url_docker(config["ensemble"])
-    RABBITMQ_URL = build_amqp_url_from_env("5672")
-    print(f"Configuring for Docker Network: {RABBITMQ_URL}")
-
-else:
-    INFERENCE_SERVICE_URLS = get_inference_service_url(config["ensemble"])
-    RABBITMQ_URL = build_amqp_url_from_config(config)
-    print(f"Configuring for Localhost: {RABBITMQ_URL}")
+# INFERENCE_SERVICE_URLS: list[str] = []
+# RABBITMQ_URL: str = ""
+#
+# if is_env_true("OPENZITI"):
+#     INFERENCE_SERVICE_URLS = get_inference_service_url_openziti(config["ensemble"])
+#     RABBITMQ_URL = build_amqp_url_from_env("5672")
+#     print(f"Configuring for OpenZiti Overlay: {RABBITMQ_URL}")
+#
+# elif is_env_true("DOCKER"):
+#     INFERENCE_SERVICE_URLS = get_inference_service_url_docker(config["ensemble"])
+#     RABBITMQ_URL = build_amqp_url_from_env("5672")
+#     print(f"Configuring for Docker Network: {RABBITMQ_URL}")
+#
+# else:
+#     INFERENCE_SERVICE_URLS = get_inference_service_url(config["ensemble"])
+#     RABBITMQ_URL = build_amqp_url_from_config(config)
+#     print(f"Configuring for Localhost: {RABBITMQ_URL}")
 
 
 # if os.environ.get("DOCKER"):
@@ -159,21 +160,28 @@ else:
 # if os.environ.get("OPENZITI"):
 #     RABBITMQ_URL = get_rabbitmq_connection_url_openziti(config)
 
+SEND_TO_QUEUE = os.environ.get("SEND_TO_QUEUE", "false").lower() == "true"
+OPENZITI = os.environ.get("OPENZITI", "false").lower() == "true"
+
+NEXT_SERVICE_URLS = json.loads(
+    os.getenv("NEXT_SERVICE_URLS", '["http://localhost:5012/inference"]')
+)
+RABBITMQ_URL = os.getenv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/")
+QUEUE_NAME = os.getenv("QUEUE_NAME", "object_detection_result")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if SEND_TO_QUEUE:
         connection = await aio_pika.connect_robust(RABBITMQ_URL)
         channel = await connection.channel()
-        queue_name = app.state.config["rabbitmq"]["queue_name"]
-        await channel.declare_queue(queue_name, durable=True)
+        await channel.declare_queue(QUEUE_NAME, durable=True)
 
         app.state.rabbitmq_connection = connection
         app.state.rabbitmq_channel = channel
 
-        yield  # Application runs during this period
+        yield
 
-        # Close RabbitMQ connection and channel at shutdown
         await channel.close()
         await connection.close()
     else:
@@ -198,15 +206,15 @@ async def process_image_task(
         ensemble_function,
         app.state.config["aggregating"]["aggregating_func"]["func_name"],
     )
-    logging.info(f"List service url: {INFERENCE_SERVICE_URLS}")
+    logging.info(f"List service url: {NEXT_SERVICE_URLS}")
 
-    if not INFERENCE_SERVICE_URLS:
-        raise RuntimeError("No inference service url")
+    if not NEXT_SERVICE_URLS:
+        raise RuntimeError("No next service URLs configured")
 
     async with aiohttp.ClientSession(trust_env=True) as session:
         tasks = [
             asyncio.create_task(send_post_request(session, url, image_data, headers))
-            for url in INFERENCE_SERVICE_URLS
+            for url in NEXT_SERVICE_URLS
         ]
         done, _ = await asyncio.wait(tasks, return_when=asyncio.ALL_COMPLETED)
 
@@ -214,32 +222,17 @@ async def process_image_task(
         for task in done:
             results.append(await task)
 
-        # Run ensemble function on the results
         final_result = chosen_ensemble_function(results, request_id)
         final_result["Timestamp"] = timestamp
         final_result["queue_publish_time"] = time.time()
         logging.info(f"Ensembled result: {final_result}")
 
-        queue_name = app.state.config["rabbitmq"]["queue_name"]
         if SEND_TO_QUEUE:
             channel = app.state.rabbitmq_channel
-            queue_name = app.state.config["rabbitmq"]["queue_name"]
             message_body = json.dumps(final_result).encode()
             message = aio_pika.Message(body=message_body)
-            await channel.default_exchange.publish(message, routing_key=queue_name)
-            logging.info(f"Sent result to RabbitMQ queue {queue_name}")
-        # final_result = chosen_ensemble_function(results, request_id)
-        # final_result["Timestamp"] = timestamp
-        # logging.info(f"Ensembled result: {final_result}")
-        #
-        # queue_name = app.state.config["rabbitmq"]["queue_name"]
-        # if SEND_TO_QUEUE:
-        #     channel = app.state.rabbitmq_channel
-        #     queue_name = app.state.config["rabbitmq"]["queue_name"]
-        #     message_body = json.dumps(final_result).encode()
-        #     message = aio_pika.Message(body=message_body)
-        #     await channel.default_exchange.publish(message, routing_key=queue_name)
-        #     logging.info(f"Sent result to RabbitMQ queue {queue_name}")
+            await channel.default_exchange.publish(message, routing_key=QUEUE_NAME)
+            logging.info(f"Sent result to RabbitMQ queue {QUEUE_NAME}")
 
 
 @app.post("/ensemble_service")
@@ -268,11 +261,7 @@ async def change_requirement(configuration: Annotated[dict, Form()]):
     try:
         async with config_lock:
             app.state.config = configuration
-            global INFERENCE_SERVICE_URLS
-            INFERENCE_SERVICE_URLS = get_inference_service_url(
-                app.state.config["ensemble"]
-            )
-            response = f"Change ensemble to: {configuration} successfully"
+            response = "Configuration updated successfully"
             return JSONResponse(content={"response": response}, status_code=200)
     except Exception as e:
         logging.exception(f"Error: {e}")
