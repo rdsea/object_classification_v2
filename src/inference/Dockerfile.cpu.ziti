@@ -36,7 +36,8 @@ WORKDIR /object_classification/inference
 
 ENV PATH="/object_classification/.venv/bin:$PATH"
 
-ENTRYPOINT ["./ziti_start.sh"]
+CMD ["tail", "-f", "/dev/null"]
+#ENTRYPOINT ["./ziti_start.sh"]
 # FROM rdsea/debian-slim-opencv:latest
 #
 # RUN apt update

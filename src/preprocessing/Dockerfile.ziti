@@ -49,4 +49,5 @@ WORKDIR /image_preprocessing/preprocessing
 
 ENV PATH="/image_preprocessing/preprocessing/.venv/bin:$PATH"
 
-ENTRYPOINT [ "./ziti_start.sh" ]
+CMD ["tail", "-f", "/dev/null"]
+#ENTRYPOINT [ "./ziti_start.sh" ]
