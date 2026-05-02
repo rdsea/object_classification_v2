@@ -16,7 +16,7 @@ csv_lock = Semaphore()
 
 
 class ImageUploadUser(HttpUser):
-    wait_time = between(1, 1)
+    wait_time = between(0.1, 0.1)
 
     def on_start(self):
         self.ds_path = Path(self.environment.parsed_options.ds_path)
