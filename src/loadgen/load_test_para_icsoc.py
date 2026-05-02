@@ -118,8 +118,16 @@ class ImageUploadUser(HttpUser):
             response_time_ms = (sensor_receive_time - sensor_send_time) * 1000
             error = str(e)
             logging.exception(f"Exception during upload: {e}")
-
         finally:
+            if sensor_receive_time is None:
+                sensor_receive_time = time.time()
+
+            if response_time_ms is None:
+                response_time_ms = (sensor_receive_time - sensor_send_time) * 1000
+
+            if status_code is None and not error:
+                error = "request_incomplete_or_stopped_before_response"
+
             if csv_writer is not None:
                 with csv_lock:
                     csv_writer.writerow(
@@ -142,6 +150,29 @@ class ImageUploadUser(HttpUser):
                         }
                     )
                     csv_file.flush()
+        # finally:
+        #     if csv_writer is not None:
+        #         with csv_lock:
+        #             csv_writer.writerow(
+        #                 {
+        #                     "run_id": self.run_id,
+        #                     "request_id": request_id,
+        #                     "backend_request_id": backend_request_id,
+        #                     "device_id": self.device_id,
+        #                     "image_name": random_image
+        #                     if "random_image" in locals()
+        #                     else "",
+        #                     "synset_id": synset_id if "synset_id" in locals() else "",
+        #                     "sensor_send_time": sensor_send_time,
+        #                     "sensor_receive_time": sensor_receive_time,
+        #                     "locust_response_time_ms": response_time_ms,
+        #                     "status_code": status_code,
+        #                     "success": success,
+        #                     "prediction": prediction,
+        #                     "error": error,
+        #                 }
+        #             )
+        # csv_file.flush()
 
 
 def add_custom_arguments(parser):
