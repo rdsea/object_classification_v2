@@ -23,7 +23,7 @@ NUM_PROCESSES = 4
 # with open(config_path) as f:
 #     ml_consumer_config = yaml.safe_load(f)
 
-config_path = Path("~/config.yaml").expanduser()
+config_path = Path("config.yaml").expanduser()
 with open(config_path) as f:
     ml_consumer_config = yaml.safe_load(f)
 
