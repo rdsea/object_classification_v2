@@ -169,6 +169,8 @@ NEXT_SERVICE_URLS = json.loads(
 RABBITMQ_URL = os.getenv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/")
 QUEUE_NAME = os.getenv("QUEUE_NAME", "object_detection_result")
 
+print(f"Configuring for Localhost: {RABBITMQ_URL}")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
