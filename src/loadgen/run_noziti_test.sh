@@ -48,15 +48,42 @@ run_test() {
 # run_test 40 10 5m
 # keep the run-up approx around 5tx/s
 # wait_time = between(0.1, 0.1) each request send wait 0.1: 1 / (response_time + 0.1s)
-run_test 1 1 5m 60
-run_test 5 1 5m 60
-run_test 10 2 5m 60
-run_test 15 3 5m 60
-run_test 20 5 5m 60
-run_test 30 8 5m 60
-run_test 40 10 5m 60
-run_test 60 15 5m 90
-run_test 80 20 5m 90
+run_test 1 1 5m 120
+run_test 2 1 5m 120
+run_test 3 1 5m 120
+run_test 4 1 5m 120
+run_test 5 1 5m 120
+
+run_test 6 1 5m 120
+run_test 7 1 5m 120
+run_test 8 1 5m 120
+run_test 9 1 5m 120
+run_test 10 2 5m 120
+
+run_test 11 2 5m 180
+run_test 12 2 5m 180
+run_test 13 2 5m 180
+run_test 14 2 5m 180
+run_test 15 3 5m 180
+
+run_test 16 2 10m 300
+run_test 17 2 10m 300
+run_test 18 2 10m 300
+run_test 19 2 10m 300
+
+run_test 20 1 5m 300
+run_test 20 2 5m 300
+run_test 20 5 5m 300
+
+#run_test 1 1 5m 60
+#run_test 5 1 5m 60
+#run_test 10 2 5m 60
+#run_test 15 3 5m 60
+#run_test 20 5 5m 60
+#run_test 30 8 5m 60
+#run_test 40 10 5m 60
+#run_test 60 15 5m 90
+#run_test 80 20 5m 90
 
 # Keep this one for througput test
 #run_test 10 2 5m 60    # roughly 10 req/s
