@@ -14,10 +14,29 @@ spec:
       labels:
         app: ml-consumer
     spec:
+      initContainers:
+        - name: wait-for-rabbitmq
+          image: busybox:1.36
+          command:
+            [
+              "sh",
+              "-c",
+              'until nc -z rabbitmq 5672; do echo "waiting for rabbitmq..."; sleep 2; done;',
+            ]
+        - name: wait-for-scylla
+          image: busybox:1.36
+          command:
+            [
+              "sh",
+              "-c",
+              'until nc -z scylla 9042; do echo "waiting for scylla..."; sleep 2; done;',
+            ]
       containers:
         - name: ml-consumer
-          image: rdsea/ml_consumer:v3
+          image: rdsea/ml_consumer:latest
           env:
+            - name: LOG_LEVEL
+              value: "WARNING"
             - name: NUM_PROCESSES
               value: "3"
             - name: RABBITMQ_USERNAME
@@ -30,10 +49,12 @@ spec:
               value: "object_detection_result"
             - name: SCYLLA_HOST
               value: "scylla"
+            - name: SCYLLA_PORT
+              value: "9042"
             - name: MANUAL_TRACING
               value: "true"
             - name: OTEL_ENDPOINT
-              value: "http://my-opentelemetry-collector.observe:4318/v1/traces" # Replace with your OpenTelemetry collector endpoint
+              value: "http://my-opentelemetry-collector.observe:4317" # Replace with your OpenTelemetry collector endpoint
 ---
 apiVersion: v1
 kind: Secret
@@ -47,10 +68,11 @@ data:
   password: Z3Vlc3Q= # echo -n 'guest' | base64
 ---
 apiVersion: v1
-kind: Secret
+kind: Service
 metadata:
-  name: mongodb-secret
-type: Opaque
-data:
-  username: cm9vdA== # echo -n 'root' | base64
-  password: ZXhhbXBsZQ== # echo -n 'example' | base64
+  name: ml-consumer
+spec:
+  selector:
+    app: ml-consumer
+  ports:
+    - port: 80

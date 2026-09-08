@@ -4,7 +4,6 @@ import asyncio
 import json
 import logging
 import os
-import sys
 from contextlib import asynccontextmanager
 from typing import Annotated
 
@@ -14,56 +13,22 @@ import ensemble_function
 import numpy as np
 import cv2
 from backends import Backend, resolve_backends
-from fastapi import BackgroundTasks, FastAPI, Form, Request, HTTPException
+from fastapi import BackgroundTasks, FastAPI, Form, HTTPException, Request
 from fastapi.responses import JSONResponse
 
-if os.environ.get("MANUAL_TRACING"):
-    span_processor_endpoint = os.environ.get("OTEL_ENDPOINT")
-    if span_processor_endpoint is None:
-        raise Exception("Manual debugging requires OTEL_ENDPOINT environment variable")
+from util.utils import load_config, setup_otel
 
-    from opentelemetry import trace
-    from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-    from opentelemetry.instrumentation.aio_pika import AioPikaInstrumentor
-    from opentelemetry.instrumentation.aiohttp_client import AioHttpClientInstrumentor
-
-    # from opentelemetry.sdk.metrics import MeterProvider
-    # from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-    from opentelemetry.sdk.resources import SERVICE_NAME, Resource
-    from opentelemetry.sdk.trace import TracerProvider
-    from opentelemetry.sdk.trace.export import BatchSpanProcessor
-
-    AioHttpClientInstrumentor().instrument()
-
-    AioPikaInstrumentor().instrument()
-    # Service name is required for most backends
-    resource = Resource(attributes={SERVICE_NAME: "ensemble"})
-
-    trace_provider = TracerProvider(resource=resource)
-    processor = BatchSpanProcessor(OTLPSpanExporter(endpoint=span_processor_endpoint))
-    trace_provider.add_span_processor(processor)
-    trace.set_tracer_provider(trace_provider)
-
-    tracer = trace.get_tracer(__name__)
-
-# Without this the root logger sits at WARNING and the resolved backend list --
-# the thing you need to see to confirm INFERENCE_BACKENDS took effect -- is dropped.
-logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO").upper())
+SERVICE_NAME = os.environ.get("SERVICE_NAME", "ensemble")
 
 SEND_TO_QUEUE = os.environ.get("SEND_TO_QUEUE", "false").lower() == "true"
 
-current_directory = os.path.dirname(os.path.abspath(__file__))
-util_directory = os.path.join(current_directory, "..", "util")
-sys.path.append(util_directory)
-
-# TODO: change utils to package that other service can reuse
-import utils  # noqa: E402
+setup_otel(SERVICE_NAME)
 
 config_lock = asyncio.Lock()  # Lock to control access to the global variable
 
 
 config_file = "ensemble_service.yaml"
-config = utils.load_config(file_path=config_file)
+config = load_config(file_path=config_file)
 
 assert config is not None
 logging.debug(f"Ensemble Service configuration: {config}")
@@ -208,12 +173,15 @@ async def send_post_request(
 async def process_image_task(
     image_data: bytes, request_id: str, headers, timestamp: str
 ):
+    # NOTE: aggregation is bypassed on this branch -- results are returned per
+    # backend instead of being collapsed into one prediction, because the LLM
+    # backend returns free text that average_probability() cannot combine.
     # chosen_ensemble_function = getattr(
     #     ensemble_function,
     #     app.state.config["aggregating"]["aggregating_func"]["func_name"],
     # )
     backends = INFERENCE_BACKENDS
-    logging.info(f"Fanning out to: {[b.url for b in backends]}")
+    logging.debug(f"Fanning out to: {[b.url for b in backends]}")
 
     if not backends:
         raise RuntimeError("No inference backend configured")
@@ -264,20 +232,20 @@ async def process_image_task(
 
         # Run ensemble function on the results
         # final_result = chosen_ensemble_function(processed_results, request_id)
-        # final_result = (processed_results, request_id)
-        # final_result["Timestamp"] = timestamp
         final_result = {
             "results": processed_results,
             "failed": failed,
             "request_id": request_id,
             "timestamp": timestamp,
         }
+        # A failed backend stays at warning level -- it is the one thing you want
+        # to see even when LOG_LEVEL=WARNING, as it is in docker-compose.
         if failed:
             logging.warning(
                 f"{len(failed)}/{len(backends)} backend(s) failed for "
                 f"request {request_id}: {failed}"
             )
-        logging.info(f"Ensembled result: {final_result}")
+        logging.debug(f"Ensembled result: {final_result}")
 
         if SEND_TO_QUEUE:
             channel = app.state.rabbitmq_channel
@@ -287,7 +255,7 @@ async def process_image_task(
             message_body = json.dumps(final_result).encode()
             message = aio_pika.Message(body=message_body)
             await channel.default_exchange.publish(message, routing_key=queue_name)
-            logging.info(f"Sent result to RabbitMQ queue {queue_name}")
+            logging.debug(f"Sent result to RabbitMQ queue {queue_name}")
 
 
 @app.post("/ensemble_service")
@@ -326,8 +294,12 @@ async def change_requirement(configuration: Annotated[dict, Form()]):
 
 
 if os.environ.get("MANUAL_TRACING"):
+    from opentelemetry.instrumentation.aio_pika import AioPikaInstrumentor
+    from opentelemetry.instrumentation.aiohttp_client import AioHttpClientInstrumentor
     from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
+    AioHttpClientInstrumentor().instrument()
+    AioPikaInstrumentor().instrument()
     FastAPIInstrumentor.instrument_app(app, exclude_spans=["send", "receive"])
 # import asyncio
 # import json

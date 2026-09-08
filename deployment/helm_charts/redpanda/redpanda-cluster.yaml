@@ -1,0 +1,49 @@
+apiVersion: cluster.redpanda.com/v1alpha2
+kind: Redpanda
+metadata:
+  name: redpanda
+  namespace: redpanda
+spec:
+  clusterSpec:
+    external:
+      domain: customredpandadomain.local
+    tls:
+      enabled: true
+    auth:
+      sasl:
+        enabled: true
+        secretRef: "redpanda-superusers"
+        users:
+          - name: alice
+            password: redpanda
+    config:
+      cluster:
+        sasl_mechanisms:
+          - "SCRAM"
+          - "PLAIN"
+    statefulset:
+      # podTemplate:
+      #   spec:
+      #     affinity:
+      #       nodeAffinity:
+      #         requiredDuringSchedulingIgnoredDuringExecution:
+      #           nodeSelectorTerms:
+      #             - matchExpressions:
+      #                 - key: node-role.kubernetes.io/control-plane
+      #                   operator: DoesNotExist
+      initContainers:
+        setDataDirOwnership:
+          enabled: true
+    storage:
+      persistentVolume:
+        storageClass: "longhorn"
+        size: 10Gi
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: redpanda-alice-password
+  namespace: redpanda
+type: Opaque
+stringData:
+  password: "alicepassword"

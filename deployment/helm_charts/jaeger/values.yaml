@@ -1,0 +1,54 @@
+provisionDataStore:
+  cassandra: false
+  elasticsearch: true
+
+storage:
+  type: elasticsearch
+collector:
+  enabled: true
+  service:
+    annotations:
+      io.cilium/global-service: "true"
+    otlp:
+      grpc:
+        name: otlp-grpc
+        port: 4317
+      http:
+        name: otlp-http
+        port: 4318
+
+query:
+  basePath: /jaeger
+  serviceMonitor:
+    enabled: true
+  extraEnv:
+    - name: METRICS_STORAGE_TYPE
+      value: prometheus
+    - name: PROMETHEUS_SERVER_URL
+      value: http://prometheus-kube-prometheus-prometheus.observe:9090/prometheus
+    - name: PROMETHEUS_QUERY_NORMALIZE_CALLS
+      value: "true"
+    - name: PROMETHEUS_QUERY_NORMALIZE_DURATION
+      value: "true"
+    - name: PROMETHEUS_QUERY_SUPPORT_SPANMETRICS_CONNECTOR
+      value: "true"
+
+elasticsearch:
+  master:
+    masterOnly: true
+    replicaCount: 1
+  persistence:
+    enabled: true
+    storageClass: longhorn
+    accessModes: ["ReadWriteOnce"]
+    size: 20gb
+
+  data:
+    replicaCount: 1
+  coordinating:
+    replicaCount: 1
+  ingest:
+    replicaCount: 1
+
+agent:
+  enabled: false

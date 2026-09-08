@@ -1,0 +1,9 @@
+[project]
+dependencies = ["pyyaml", "numpy", "pillow"]
+name = "util"
+version = "0.1.0"
+requires-python = "== 3.10.18"
+
+[build-system]
+requires = ["uv_build>=0.8.24,<0.9.0"]
+build-backend = "uv_build"

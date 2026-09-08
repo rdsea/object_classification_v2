@@ -19,15 +19,19 @@ jobs:
         image:
           - name: preprocessing
             dir: src/preprocessing
-            dockerfile: preprocessing/Dockerfile
+            dockerfile: src/preprocessing/Dockerfile
 
           - name: ensemble
             dir: src/ensemble
-            dockerfile: ensemble/Dockerfile
+            dockerfile: src/ensemble/Dockerfile
 
           - name: inference_cpu
             dir: src/inference
-            dockerfile: inference/Dockerfile.cpu
+            dockerfile: src/inference/Dockerfile.cpu
+
+          - name: ml_consumer
+            dir: src/ml_consumer
+            dockerfile: src/ml_consumer/Dockerfile
 
     steps:
       - name: Checkout repository
@@ -38,13 +42,17 @@ jobs:
       - name: Check if ${{ matrix.image.dir }} changed
         id: changes
         run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Manual dispatch detected. Forcing build..."
+            echo "changed=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
           echo "Checking changes in ${{ matrix.image.dir }}..."
-          # Get the list of changed files between current and previous commit
           CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
           echo "Changed files:"
           echo "$CHANGED_FILES"
 
-          # Check if any changed file is under the relevant directory
           if echo "$CHANGED_FILES" | grep -q "^${{ matrix.image.dir }}/"; then
             echo "changed=true" >> $GITHUB_OUTPUT
           else
@@ -68,7 +76,6 @@ jobs:
 
       - name: Download inference data from Google Drive
         if: matrix.image.name == 'inference_cpu' && steps.changes.outputs.changed == 'true'
-        working-directory: ./src
         run: |
           pip install gdown
           # Replace with your actual Google Drive folder URL or ID
@@ -78,8 +85,7 @@ jobs:
             -f ${{ matrix.image.dockerfile }}  --output type=registry .
 
       - name: Build and push ${{ matrix.image.name }} image
-        if: steps.changes.outputs.changed == 'true' && ( matrix.image.name == 'preprocessing' || matrix.image.name == 'ensemble')
-        working-directory: ./src
+        if: steps.changes.outputs.changed == 'true' && ( matrix.image.name == 'preprocessing' || matrix.image.name == 'ensemble' || matrix.image.name == 'ml_consumer')
         run: |
           docker buildx build --platform linux/amd64,linux/arm64 \
             -t rdsea/${{ matrix.image.name }}:${{ github.event.inputs.image_tag || 'latest' }} \

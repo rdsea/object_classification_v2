@@ -4,6 +4,13 @@ metadata:
   name: rabbitmq
   namespace: default
 spec:
+  override:
+    statefulSet:
+      spec:
+        template:
+          metadata:
+            labels:
+              app: rabbitmq
   replicas: 1
   rabbitmq:
     additionalConfig: |

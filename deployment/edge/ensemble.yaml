@@ -24,19 +24,21 @@ spec:
         node-role.kubernetes.io/worker: "true"
       containers:
         - name: ensemble
-          imagePullPolicy: "IfNotPresent"
-          image: rdsea/ensemble
+          imagePullPolicy: "Always"
+          image: rdsea/ensemble:latest
           ports:
             - containerPort: 5011
           env:
+            - name: LOG_LEVEL
+              value: "INFO"
             - name: MANUAL_TRACING
               value: "true"
             - name: OTEL_ENDPOINT
-              value: "http://my-opentelemetry-collector.observe:4318/v1/traces"
+              value: "http://my-opentelemetry-collector.observe:4317"
             - name: SEND_TO_QUEUE
               value: "true"
             - name: RABBITMQ_URL
-              value: "gateway.cloud-1.svc:31469"
+              value: "gateway.cloud-1.svc:30072"
             - name: RABBITMQ_QUEUE_NAME
               value: "object_detection_result"
             - name: RABBITMQ_USERNAME
@@ -45,8 +47,8 @@ spec:
               value: "adminadminadmin"
           resources:
             requests:
-              cpu: "250m"
-              memory: "200Mi"
+              cpu: "300m"
+              memory: "150Mi"
             limits:
               cpu: "500m"
               memory: "256Mi"

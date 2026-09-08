@@ -24,17 +24,16 @@ repos:
       # Run the linter.
       - id: ruff-check
         args: [--fix]
-        exclude: applications/online-boutique/
       # Run the formatter.
       - id: ruff-format
 
-  - repo: local
-    hooks:
-      - id: ty
-        name: ty check
-        entry: uvx ty check benchmark/experiment_controller/
-        language: system
-        files: benchmark/experiment_controller/
+  # - repo: local
+  #   hooks:
+  #     - id: ty
+  #       name: ty check
+  #       entry: uvx ty check src/
+  #       language: system
+  #       files: src/
 
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.28.0

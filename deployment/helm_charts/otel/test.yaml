@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: microsim
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: microsim
+  template:
+    metadata:
+      labels:
+        app: microsim
+    spec:
+      containers:
+        - name: microsim
+          image: yurishkuro/microsim
+          args: ["-d", "24h", "-s", "500ms", "-w", "10"]
+          env:
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://spm-metrics-source.default:4318
+            - name: OTEL_EXPORTER_OTLP_INSECURE
+              value: "true"

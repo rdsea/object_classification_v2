@@ -1,31 +1,27 @@
-#FROM debian:stable-slim
-
+# This's run from root dir
+# opencv base: the ensemble re-encodes the raw RGB buffer to JPEG for LLM
+# backends, same reason preprocessing uses this image.
 FROM rdsea/debian-slim-opencv:latest
 
-WORKDIR /ensemble
+WORKDIR /workspace
 
+COPY --from=ghcr.io/astral-sh/uv:0.9.0 /uv /uvx /bin/
 
-COPY --from=ghcr.io/astral-sh/uv:0.7.21 /uv /uvx /bin/
+COPY pyproject.toml uv.lock /workspace/
 
-COPY ./ensemble/*.toml ./
+RUN uv sync --frozen --no-install-workspace --package=ensemble --no-cache --compile-bytecode
 
+COPY src/ensemble /workspace/src/ensemble
 
-COPY ./ensemble/run_server.sh ./ensemble/run_server.sh
+COPY src/util /workspace/src/util
 
-RUN uv python pin 3.10.18
-
-RUN uv sync --compile-bytecode --no-cache
-
-COPY ./ensemble/*.py ./ensemble/
-
-COPY ./ensemble/*.yaml ./ensemble/
-
-COPY ./util/ ./util
+RUN uv sync --frozen --package=ensemble --no-cache --compile-bytecode
 
 EXPOSE 5011
 
-WORKDIR /ensemble/ensemble
+ENV PATH="/workspace/.venv/bin:$PATH"
 
-ENV PATH="/ensemble/.venv/bin:$PATH"
+WORKDIR /workspace/src/ensemble
 
 ENTRYPOINT [ "./run_server.sh" ]
+

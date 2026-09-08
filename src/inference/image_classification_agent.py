@@ -1,19 +1,11 @@
-import os
-import sys
-
 import cv2
 import numpy as np
 import onnxruntime as ort
 from datamodel import ImageClassificationModelEnum, ModelConfig
 from numpy._typing import NDArray
 
-current_directory = os.path.dirname(os.path.abspath(__file__))
-util_directory = os.path.join(current_directory, "..", "util")
-sys.path.append(util_directory)
-
-from classes import IMAGENET2012_CLASSES  # noqa: E402
-
-from preprocessing import preprocess_input  # noqa: E402
+from util.classes import IMAGENET2012_CLASSES
+from util.preprocessing import preprocess_input
 
 key_list = list(IMAGENET2012_CLASSES.keys())
 
@@ -53,7 +45,6 @@ class ImageClassificationAgent:
                 image_array, image_array.shape[1] > self.model_config.input_shape[1]
             )
 
-        print(self.model_config.input_mode)
         image_array = preprocess_input(image_array, mode=self.model_config.input_mode)
 
         if len(image_array.shape) != 4:

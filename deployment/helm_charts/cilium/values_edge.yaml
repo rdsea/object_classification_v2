@@ -1,0 +1,77 @@
+cluster:
+  # CHANGE THIS FOR DIFFERENT CLUSTERS
+  #NOTE: Don't use cluster-id 0 as it's reserved
+  name: edge-1
+  id: 2
+kubeProxyReplacement: true
+
+l2announcements:
+  enabled: true
+  leaseDuration: 15s
+  leaseRenewDeadline: 5s
+  leaseRetryPeriod: 2s
+k8sClientRateLimit:
+  qps: 20
+  burst: 30
+
+ipam:
+  # -- Configure IP Address Management mode.
+  # ref: https://docs.cilium.io/en/stable/network/concepts/ipam/
+  mode: "cluster-pool"
+  # -- Maximum rate at which the CiliumNode custom resource is updated.
+  ciliumNodeUpdateRate: "15s"
+  # -- Pre-allocation settings for IPAM in Multi-Pool mode
+  multiPoolPreAllocation: ""
+  # -- Install ingress/egress routes through uplink on host for Pods when working with delegated IPAM plugin.
+  installUplinkRoutesForDelegatedIPAM: false
+  operator:
+    # @schema
+    # type: [array, string]
+    # @schema
+    # -- IPv4 CIDR list range to delegate to individual nodes for IPAM.
+    #NOTE: Change this to match the cluster.id
+    clusterPoolIPv4PodCIDRList: ["10.42.0.0/22"]
+    # -- IPv4 CIDR mask size to delegate to individual nodes for IPAM.
+    clusterPoolIPv4MaskSize: 24
+
+gatewayAPI:
+  enabled: true
+
+prometheus:
+  enabled: true
+
+operator:
+  replicas: 1
+  prometheus:
+    enabled: true
+
+hubble:
+  enabled: true
+  relay:
+    enabled: true
+  ui:
+    enabled: true
+    baseUrl: "/hubble/"
+    frontend:
+      image:
+        override: "quay.io/cilium/hubble-ui-ci:12c937d8cc8cd47ac66b9a7a10d7d6b1b1a86f0e@sha256:873632cda74618532270abf519a4f91c2c3734edf3eafad20af0a7e81c3fe61c"
+  metrics:
+    enableOpenMetrics: true
+    enabled:
+      - dns
+      - drop
+      - tcp
+      - flow
+      - port-distribution
+      - icmp
+      - http
+      # - httpV2:
+      #     exemplars: true
+      #     labelsContext:
+      #       - source_ip
+      #       - source_namespace
+      #       - source_workload
+      #       - destination_ip
+      #       - destination_namespace
+      #       - destination_workload
+      #       - traffic_direction
