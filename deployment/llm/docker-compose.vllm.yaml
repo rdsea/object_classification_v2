@@ -1,0 +1,69 @@
+# vLLM engine overlay. REQUIRES an NVIDIA GPU with enough VRAM for the chosen
+# model — vLLM will not start on a CPU-only host. On edge / laptop hardware use
+# docker-compose.ollama.yaml instead.
+#
+#   docker compose -f src/docker-compose.yml -f deployment/llm/docker-compose.vllm.yaml up
+#
+# Prerequisite: nvidia-container-toolkit installed, so `docker run --gpus all` works.
+#
+# VLLM_MODEL must be a HuggingFace repo id, not an Ollama tag:
+#   VLLM_MODEL=llava-hf/llava-1.5-7b-hf
+#   VLLM_MODEL=Qwen/Qwen2-VL-2B-Instruct
+
+services:
+  vllm:
+    image: vllm/vllm-openai:${VLLM_VERSION:-latest}
+    restart: unless-stopped
+    volumes:
+      # Cache weights so a restart does not re-download from HuggingFace.
+      - vllm-cache:/root/.cache/huggingface
+    ports:
+      - "${VLLM_PORT:-8000}:8000"
+    environment:
+      # Needed only for gated repos (e.g. Llama). Leave unset otherwise.
+      HUGGING_FACE_HUB_TOKEN: "${HUGGING_FACE_HUB_TOKEN:-}"
+    command:
+      - --model
+      - ${VLLM_MODEL:-llava-hf/llava-1.5-7b-hf}
+      - --served-model-name
+      - ${LLM_MODEL:-llava}
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8000"
+      # Fraction of VRAM vLLM may claim. Lower it if other processes share the GPU.
+      - --gpu-memory-utilization
+      - "${VLLM_GPU_MEMORY_UTILIZATION:-0.85}"
+      - --max-model-len
+      - "${VLLM_MAX_MODEL_LEN:-4096}"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: ${VLLM_GPU_COUNT:-1}
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request;urllib.request.urlopen('http://localhost:8000/health')\" || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 40
+      # Model load + weight download can take several minutes on a cold cache.
+      start_period: 300s
+
+  # Same adapter, pointed at vLLM's OpenAI-compatible API.
+  llava-service:
+    depends_on:
+      vllm:
+        condition: service_healthy
+    environment:
+      LLM_BACKEND: "openai"
+      LLM_BASE_URL: "http://vllm:8000"
+      # Must match --served-model-name above.
+      LLM_MODEL: "${LLM_MODEL:-llava}"
+      MODEL_CALL_TIMEOUT: "${MODEL_CALL_TIMEOUT:-120}"
+      MANUAL_TRACING: "true"
+      OTEL_ENDPOINT: "${OTEL_ENDPOINT:-http://jaeger:4318/v1/traces}"
+
+volumes:
+  vllm-cache:
