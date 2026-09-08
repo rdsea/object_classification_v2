@@ -1,28 +1,23 @@
 [project]
 name = "llm_service"
 version = "0.0.1"
-description = "LLM service"
-requires-python = ">=3.10,<3.11"
+description = "Adapter exposing an Ollama/vLLM model on the ensemble's /inference contract"
+requires-python = "== 3.10.18"
 
 dependencies = [
-  "fastapi>=0.95",
-  "uvicorn[standard]>=0.22",
-  "python-dotenv>=1.0.1",
+  "fastapi[standard]>=0.111.1",
+  "uvicorn[standard]>=0.30.3",
+  "aiohttp>=3.9.5",
+  "python-multipart",
   "ollama>=0.1.7",
   "Pillow>=10.2.0",
-  "python-multipart",
-  "langfuse>=3.3.4",
-  "langchain>=0.3.27",
   "openlit",
-  "aiohttp",
-  "opentelemetry-api",
-  "opentelemetry-sdk",
-  "opentelemetry-instrumentation-fastapi",
-  "opentelemetry-instrumentation-requests",
-  "opentelemetry-instrumentation-langchain",
-  "opentelemetry-exporter-otlp",
+  "opentelemetry-distro>=0.48b0",
+  "opentelemetry-instrumentation-fastapi>=0.48b0",
+  "opentelemetry-instrumentation-aiohttp-client>=0.48b0",
+  "opentelemetry-exporter-otlp>=1.27.0",
+  "util",
 ]
 
-[build-system]
-requires = ["setuptools>=61.0","wheel"]
-build-backend = "setuptools.build_meta"
+[tool.uv.sources]
+util = { workspace = true }

@@ -1,34 +1,24 @@
+# This's run from root dir
 FROM debian:stable-slim
 
-# Set the working directory in the container
-WORKDIR /llm_service
+WORKDIR /workspace
 
-COPY --from=ghcr.io/astral-sh/uv:0.7.21 /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.9.0 /uv /uvx /bin/
 
-# Copy the pyproject.toml file to leverage Docker layer caching
-COPY ./llm_service/*.toml ./
+COPY pyproject.toml uv.lock /workspace/
 
-COPY ./llm_service/run_server.sh ./llm_service/run_server.sh
+RUN uv sync --frozen --no-install-workspace --package=llm_service --no-cache --compile-bytecode
 
-RUN uv python pin 3.10.18
+COPY src/llm_service /workspace/src/llm_service
 
-RUN uv sync --compile-bytecode --no-cache
+COPY src/util /workspace/src/util
 
-COPY ./llm_service/*.py ./llm_service/
-
-# Make the run_server.sh script executable
-#RUN chmod +x run_server.sh
-
-COPY ./util/ ./util
+RUN uv sync --frozen --package=llm_service --no-cache --compile-bytecode
 
 EXPOSE 5012
 
-WORKDIR /llm_service/llm_service
+ENV PATH="/workspace/.venv/bin:$PATH"
 
-RUN chmod +x run_server.sh
+WORKDIR /workspace/src/llm_service
 
-ENV PATH="/llm_service/.venv/bin:$PATH"
-
-# Command to run the application
 ENTRYPOINT [ "./run_server.sh" ]
-#CMD ["./run_server.sh"]

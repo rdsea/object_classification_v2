@@ -17,9 +17,12 @@ import openlit
 # from email.policy import default as email_policy
 import re
 
+from util.utils import setup_otel
+
 MAX_IMAGE_SIZE = int(os.getenv("MAX_IMAGE_SIZE", 10 * 1024 * 1024))  # 10 MiB default
 MODEL_CALL_TIMEOUT = int(os.getenv("MODEL_CALL_TIMEOUT", 60))  # seconds
 LLM_MODEL = os.getenv("LLM_MODEL", "llava:7b")
+SERVICE_NAME = os.environ.get("SERVICE_NAME", f"inference-{LLM_MODEL.lower()}")
 # "ollama" talks to the Ollama native API; "openai" talks to any OpenAI-compatible
 # /v1/chat/completions server (vLLM, or Ollama's own /v1 shim).
 LLM_BACKEND = os.getenv("LLM_BACKEND", "ollama").strip().lower()
@@ -27,52 +30,49 @@ if LLM_BACKEND not in ("ollama", "openai"):
     raise ValueError(f"LLM_BACKEND must be 'ollama' or 'openai', got {LLM_BACKEND!r}")
 LLM_PROMPT = os.getenv("LLM_PROMPT", "What is in the image?")
 SAVE_DEBUG_IMAGE = os.getenv("SAVE_DEBUG_IMAGE", "false").lower() == "true"
+# Tracing/logging setup is shared with every other service (util.utils.setup_otel):
+# gRPC OTLP export, LOG_LEVEL handling, and OTEL log export in one place.
+_, tracer = setup_otel(SERVICE_NAME)
+
+def _init_openlit(service_name: str, environment: str, tracer):
+    """Initialise openlit across its incompatible signatures.
+
+    openlit.init() has drifted: 1.34 takes `application_name` and `tracer`, while
+    1.36 renamed the former to `service_name` and dropped `tracer` entirely.
+    uv.lock currently resolves 1.34.30 on Linux and 1.36.8 on macOS, so a
+    hardcoded call raises TypeError on one platform or the other and crash-loops
+    the service. Pass only what the installed version actually accepts.
+
+    `otlp_endpoint` is deliberately NOT passed: setup_otel() has already
+    registered a global gRPC tracer provider, and handing openlit the same
+    OTEL_ENDPOINT makes it build a second, HTTP exporter aimed at the gRPC port
+    (4317), which the collector resets -- flooding the log with urllib3
+    ConnectionResetError tracebacks on every span flush.
+    """
+    import inspect
+
+    params = inspect.signature(openlit.init).parameters
+    candidates = {
+        "service_name": service_name,
+        "application_name": service_name,
+        "environment": environment,
+        "tracer": tracer,
+    }
+    kwargs = {k: v for k, v in candidates.items() if k in params}
+    logging.getLogger(__name__).info(f"openlit.init({', '.join(sorted(kwargs))})")
+    openlit.init(**kwargs)
+
+
 if os.environ.get("MANUAL_TRACING"):
-    span_processor_endpoint = os.environ.get("OTEL_ENDPOINT")
-    if span_processor_endpoint is None:
-        raise Exception("Manual debugging requires OTEL_ENDPOINT environment variable")
-
-    from opentelemetry import trace
-    from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-
-    # from opentelemetry.instrumentation.requests import RequestsInstrumentor
-    # from opentelemetry.instrumentation.langchain import LangchainInstrumentor
-
-    # from opentelemetry.sdk.metrics import MeterProvider
-    # from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-    from opentelemetry.instrumentation.aiohttp_client import AioHttpClientInstrumentor
-    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-    from opentelemetry.sdk.resources import SERVICE_NAME, Resource
-    from opentelemetry.sdk.trace import TracerProvider
-    from opentelemetry.sdk.trace.export import BatchSpanProcessor
-
-    #
-    # RequestsInstrumentor().instrument()
-    # LangchainInstrumentor().instrument()
-    #
-    #
-    # # Service name is required for most backends
-    resource = Resource(attributes={SERVICE_NAME: f"inference-{LLM_MODEL.lower()}"})
-    #
-    trace_provider = TracerProvider(resource=resource)
-    processor = BatchSpanProcessor(OTLPSpanExporter(endpoint=span_processor_endpoint))
-    trace_provider.add_span_processor(processor)
-    trace.set_tracer_provider(trace_provider)
-    #
-    tracer = trace.get_tracer(__name__)
-    openlit.init(
-        tracer=tracer,  # use your configured tracer/provider
-        # optionally also pass otlp_endpoint or other args, but tracer is primary
-        otlp_endpoint=span_processor_endpoint,
+    # openlit adds LLM-specific spans (model, tokens, latency) on top of the
+    # provider setup_otel already registered globally.
+    _init_openlit(
+        service_name=SERVICE_NAME,
+        environment=os.getenv("OTEL_ENVIRONMENT", "production"),
+        tracer=tracer,
     )
 
-    # openlit.init(
-    #     service_name=f"inference-{LLM_MODEL.lower()}",
-    #     environment="production",
-    #     otlp_endpoint=span_processor_endpoint,
-    # )
 # load_dotenv()
-logging.basicConfig(level=logging.INFO)
 
 app = FastAPI()
 
@@ -448,8 +448,10 @@ async def inference(request: Request, file: Optional[UploadFile] = File(None)):
 
 
 if os.environ.get("MANUAL_TRACING"):
+    from opentelemetry.instrumentation.aiohttp_client import AioHttpClientInstrumentor
     from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
+    AioHttpClientInstrumentor().instrument()
     FastAPIInstrumentor.instrument_app(app, exclude_spans=["send", "receive"])
 
 # @app.post("/inference")
