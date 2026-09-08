@@ -59,7 +59,7 @@ services:
       #OTEL_ENDPOINT: "http://otelcol:4318" #/v1/traces"
       OTEL_ENDPOINT: "http://130.233.195.221:4318/v1/traces"
 
-  llm:
+  llm-llava:
     image: hongtringuyen/llm_service
     container_name: llava
     # ports:
