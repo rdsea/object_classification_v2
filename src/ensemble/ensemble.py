@@ -7,13 +7,13 @@ import os
 import sys
 from contextlib import asynccontextmanager
 from typing import Annotated
-from urllib.parse import urlparse
 
 import aio_pika
 import aiohttp
 import ensemble_function
 import numpy as np
 import cv2
+from backends import Backend, resolve_backends
 from fastapi import BackgroundTasks, FastAPI, Form, Request, HTTPException
 from fastapi.responses import JSONResponse
 
@@ -46,6 +46,10 @@ if os.environ.get("MANUAL_TRACING"):
 
     tracer = trace.get_tracer(__name__)
 
+# Without this the root logger sits at WARNING and the resolved backend list --
+# the thing you need to see to confirm INFERENCE_BACKENDS took effect -- is dropped.
+logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO").upper())
+
 SEND_TO_QUEUE = os.environ.get("SEND_TO_QUEUE", "false").lower() == "true"
 
 current_directory = os.path.dirname(os.path.abspath(__file__))
@@ -65,21 +69,6 @@ assert config is not None
 logging.debug(f"Ensemble Service configuration: {config}")
 
 
-def get_inference_service_url(ensemble_chosen: list[str]):
-    return [f"http://{item.lower()}-service:5012/inference" for item in ensemble_chosen]
-
-
-def get_inference_service_url_docker(ensemble_chosen: list[str]):
-    return [f"http://{item.lower()}:5012/inference" for item in ensemble_chosen]
-
-
-def get_inference_service_url_openziti(ensemble_chosen: list[str]):
-    return [
-        f"http://{item.lower()}.miniziti.private:5012/inference"
-        for item in ensemble_chosen
-    ]
-
-
 def get_rabbitmq_connection_url():
     rabbitmq_url = os.environ.get("RABBITMQ_URL")
     username = os.environ.get("RABBITMQ_USERNAME")
@@ -89,28 +78,7 @@ def get_rabbitmq_connection_url():
     return f"amqp://{username}:{password}@{rabbitmq_url}"
 
 
-INFERENCE_SERVICE_URLS = get_inference_service_url(config["ensemble"])
-if os.environ.get("DOCKER"):
-    INFERENCE_SERVICE_URLS = get_inference_service_url_docker(config["ensemble"])
-
-if os.environ.get("OPENZITI"):
-    INFERENCE_SERVICE_URLS = get_inference_service_url_openziti(config["ensemble"])
-
-
-def get_first_part_of_host(url: str) -> str:
-    """
-    Extract the first part before the first '-' from the host portion of the URL.
-    Examples:
-      - http://llm-llava-service:5012/inference  -> "llm"
-      - llm-llava-service:5012/inference          -> "llm"
-      - http://llm.example.com                    -> "llm"
-    """
-    parsed = urlparse(url)
-    host = parsed.hostname or ""
-    if not host:
-        # fallback for weird strings without scheme
-        host = url.split("/", 1)[0].split(":", 1)[0]
-    return host.split("-", 1)[0].lower()
+INFERENCE_BACKENDS: list[Backend] = resolve_backends(config)
 
 
 def is_jpeg_bytes(b: bytes) -> bool:
@@ -244,23 +212,22 @@ async def process_image_task(
     #     ensemble_function,
     #     app.state.config["aggregating"]["aggregating_func"]["func_name"],
     # )
-    logging.info(f"List service url: {INFERENCE_SERVICE_URLS}")
+    backends = INFERENCE_BACKENDS
+    logging.info(f"Fanning out to: {[b.url for b in backends]}")
 
-    if not INFERENCE_SERVICE_URLS:
-        raise RuntimeError("No inference service url")
+    if not backends:
+        raise RuntimeError("No inference backend configured")
 
-    # Precompute JPEG bytes if any service requires `llm` prefix
-    needs_llm = any(get_first_part_of_host(u) == "llm" for u in INFERENCE_SERVICE_URLS)
+    # LLM backends want a real image; preprocessing hands us a raw RGB buffer.
+    # Encode once and reuse across every LLM backend.
     llm_image_bytes = None
-    if needs_llm:
-        # encode once and reuse
+    if any(backend.is_llm for backend in backends):
         llm_image_bytes = encode_to_jpeg_bytes(image_data)
 
     async with aiohttp.ClientSession(trust_env=True) as session:
         tasks = []
-        for url in INFERENCE_SERVICE_URLS:
-            first_part = get_first_part_of_host(url)
-            payload = llm_image_bytes if first_part == "llm" else image_data
+        for backend in backends:
+            payload = llm_image_bytes if backend.is_llm else image_data
 
             # Prepare headers to forward, but strip/override headers that would be incorrect
             forward_headers = {
@@ -268,25 +235,32 @@ async def process_image_task(
                 for k, v in headers.items()
                 if k.lower() not in ("content-length", "host")
             }
-            if first_part == "llm":
+            if backend.is_llm:
                 # ensure the content-type matches JPEG
                 forward_headers["Content-Type"] = "image/jpeg"
 
             tasks.append(
                 asyncio.create_task(
-                    send_post_request(session, url, payload, forward_headers)
+                    send_post_request(session, backend.url, payload, forward_headers)
                 )
             )
 
-        # gather results, but don't fail all if one fails — log and continue
+        # gather results, but don't fail all if one fails — record the failure and continue
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         processed_results = []
-        for idx, r in enumerate(results):
-            if isinstance(r, Exception):
-                logging.exception(f"Call to {INFERENCE_SERVICE_URLS[idx]} failed: {r}")
+        failed = []
+        for backend, result in zip(backends, results, strict=True):
+            entry = {"backend": backend.name, "kind": backend.kind}
+            if isinstance(result, BaseException):
+                logging.exception(f"Call to {backend.url} failed: {result}")
+                failed.append(backend.name)
+                entry["status"] = "error"
+                entry["error"] = f"{type(result).__name__}: {result}"
             else:
-                processed_results.append(r)
+                entry["status"] = "ok"
+                entry["result"] = result
+            processed_results.append(entry)
 
         # Run ensemble function on the results
         # final_result = chosen_ensemble_function(processed_results, request_id)
@@ -294,9 +268,15 @@ async def process_image_task(
         # final_result["Timestamp"] = timestamp
         final_result = {
             "results": processed_results,
+            "failed": failed,
             "request_id": request_id,
             "timestamp": timestamp,
         }
+        if failed:
+            logging.warning(
+                f"{len(failed)}/{len(backends)} backend(s) failed for "
+                f"request {request_id}: {failed}"
+            )
         logging.info(f"Ensembled result: {final_result}")
 
         if SEND_TO_QUEUE:
@@ -336,10 +316,8 @@ async def change_requirement(configuration: Annotated[dict, Form()]):
     try:
         async with config_lock:
             app.state.config = configuration
-            global INFERENCE_SERVICE_URLS
-            INFERENCE_SERVICE_URLS = get_inference_service_url(
-                app.state.config["ensemble"]
-            )
+            global INFERENCE_BACKENDS
+            INFERENCE_BACKENDS = resolve_backends(app.state.config, prefer_env=False)
             response = f"Change ensemble to: {configuration} successfully"
             return JSONResponse(content={"response": response}, status_code=200)
     except Exception as e:

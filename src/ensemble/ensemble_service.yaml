@@ -6,7 +6,23 @@ aggregating:
     # Minimum number of messages required to perform aggregation without waiting for the time limit
     min_message: 3
 
+# Fallback backend list, used only when the INFERENCE_BACKENDS environment
+# variable is unset (see docker-compose.yml). Bare names are turned into URLs by
+# deployment mode: {name}-service:5012 for k8s, {name}:5012 with DOCKER=true,
+# {name}.miniziti.private:5012 with OPENZITI=true. A name starting with "llm-"
+# is treated as an LLM backend.
 ensemble:
   - MobileNetV2
   - EfficientNetB0
   - llm-llava
+# Alternative to the list above: state URL and kind explicitly, the same way
+# INFERENCE_BACKENDS does. Useful when this file is mounted as a k8s ConfigMap.
+# If present, this key wins over `ensemble`.
+#
+# backends:
+#   - name: mobilenetv2
+#     kind: cnn
+#     url: http://mobilenetv2-service:5012/inference
+#   - name: llava
+#     kind: llm
+#     url: http://llava-service:5012/inference
