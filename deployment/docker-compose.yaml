@@ -30,6 +30,11 @@ services:
       #OTEL_ENDPOINT: "http://otelcol:4318" #/v1/traces"
       SEND_TO_QUEUE: false
       OTEL_ENDPOINT: "http://130.233.195.221:4318/v1/traces"
+      # name=kind=url per backend; edit here instead of rebuilding the image.
+      INFERENCE_BACKENDS: >-
+        mobilenetv2=cnn=http://mobilenetv2:5012/inference,
+        efficientnetb0=cnn=http://efficientnetb0:5012/inference,
+        llava=llm=http://llm-llava:5012/inference
 
   efficientnetb0:
     image: hongtringuyen/inference
@@ -54,14 +59,15 @@ services:
       #OTEL_ENDPOINT: "http://otelcol:4318" #/v1/traces"
       OTEL_ENDPOINT: "http://130.233.195.221:4318/v1/traces"
 
-  llm-llava:
+  llm:
     image: hongtringuyen/llm_service
     container_name: llava
     # ports:
     #   - 5012:5012
     #command: [""]
     environment:
-      OLLAMA_HOST: "http://host.docker.internal:11434"
+      LLM_BACKEND: "ollama"
+      LLM_BASE_URL: "http://host.docker.internal:11434"
       LLM_MODEL: "llava:7b"
       MANUAL_TRACING: true
       OTEL_ENDPOINT: "http://130.233.195.221:4318/v1/traces"
