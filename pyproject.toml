@@ -16,6 +16,7 @@ members = [
   "src/ml_consumer",
   "src/ensemble",
   "src/inference",
+  "src/llm_service",
   "src/preprocessing",
   "src/util",
 
