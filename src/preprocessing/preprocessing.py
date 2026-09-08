@@ -13,7 +13,7 @@ from image_processing_functions import resize
 
 from util.utils import load_config, setup_otel
 
-SERVICE_NAME = os.environ.get("SERVICE_NAME", "ensemble")
+SERVICE_NAME = os.environ.get("SERVICE_NAME", "preprocessing")
 
 ENSEMBLE_SERVICE_URL = (
     "http://ensemble-service.default.svc.cluster.local:5011/ensemble_service"
