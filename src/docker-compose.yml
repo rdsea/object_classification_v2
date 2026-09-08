@@ -31,6 +31,13 @@ services:
       OTEL_ENDPOINT: "http://jaeger:4318/v1/traces"
       SEND_TO_QUEUE: true
       cpus: 0.5
+      # The ensemble members, as name=kind=url. Edit here to add/remove/repoint a
+      # backend without rebuilding the image. kind is "cnn" (raw RGB buffer) or
+      # "llm" (JPEG-encoded). Omit this var to fall back to ensemble_service.yaml.
+      INFERENCE_BACKENDS: >-
+        mobilenetv2=cnn=http://mobilenetv2:5012/inference,
+        efficientnetb0=cnn=http://efficientnetb0:5012/inference,
+        llava=llm=http://llava-service:5012/inference
 
   efficientnetb0:
     image: rdsea/inference:cpu
@@ -52,16 +59,20 @@ services:
       OTEL_ENDPOINT: "http://jaeger:4318/v1/traces"
     cpus: 2
 
+  # Adapter that exposes an Ollama/vLLM model on the same /inference contract as
+  # the CNN services. By default it talks to an Ollama on the host; overlay
+  # deployment/llm/docker-compose.ollama.yaml to run the engine in a container.
   llava-service:
     image: hongtringuyen/llm_service
     build:
-      context: ./llm_service
-      dockerfile: Dockerfile
+      context: ./src
+      dockerfile: llm_service/Dockerfile
     restart: unless-stopped
     # ports:
     #   - 5012:5012
     environment:
-      OLLAMA_HOST: "http://host.docker.internal:11435"
+      LLM_BACKEND: "ollama"
+      LLM_BASE_URL: "http://host.docker.internal:11434"
       LLM_MODEL: "llava:7b"
       MANUAL_TRACING: true
       OTEL_ENDPOINT: "http://jaeger:4318/v1/traces"
