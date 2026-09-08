@@ -2,6 +2,7 @@ import os
 import asyncio
 import base64
 import hashlib
+import json
 import logging
 import aiohttp
 
@@ -19,6 +20,13 @@ import re
 MAX_IMAGE_SIZE = int(os.getenv("MAX_IMAGE_SIZE", 10 * 1024 * 1024))  # 10 MiB default
 MODEL_CALL_TIMEOUT = int(os.getenv("MODEL_CALL_TIMEOUT", 60))  # seconds
 LLM_MODEL = os.getenv("LLM_MODEL", "llava:7b")
+# "ollama" talks to the Ollama native API; "openai" talks to any OpenAI-compatible
+# /v1/chat/completions server (vLLM, or Ollama's own /v1 shim).
+LLM_BACKEND = os.getenv("LLM_BACKEND", "ollama").strip().lower()
+if LLM_BACKEND not in ("ollama", "openai"):
+    raise ValueError(f"LLM_BACKEND must be 'ollama' or 'openai', got {LLM_BACKEND!r}")
+LLM_PROMPT = os.getenv("LLM_PROMPT", "What is in the image?")
+SAVE_DEBUG_IMAGE = os.getenv("SAVE_DEBUG_IMAGE", "false").lower() == "true"
 if os.environ.get("MANUAL_TRACING"):
     span_processor_endpoint = os.environ.get("OTEL_ENDPOINT")
     if span_processor_endpoint is None:
@@ -68,22 +76,60 @@ logging.basicConfig(level=logging.INFO)
 
 app = FastAPI()
 
-# read env with sensible defaults
-ollama_host = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")
-if not ollama_host.startswith("http://") and not ollama_host.startswith("https://"):
-    ollama_host = "http://" + ollama_host
-# LLM_MODEL = os.getenv("LLM_MODEL", "llava:7b")
+def _normalize_url(url: str) -> str:
+    if not url.startswith("http://") and not url.startswith("https://"):
+        url = "http://" + url
+    return url.rstrip("/")
 
-# create a single AsyncClient for reuse
-client = AsyncClient(host=ollama_host)
+
+# LLM_BASE_URL is the single knob; OLLAMA_HOST is kept as a fallback so existing
+# deployments that only set it keep working.
+LLM_BASE_URL = _normalize_url(
+    os.getenv("LLM_BASE_URL") or os.getenv("OLLAMA_HOST") or "http://127.0.0.1:11434"
+)
+ollama_host = LLM_BASE_URL  # backwards-compatible alias
+
+logging.info(
+    "LLM adapter: backend=%s model=%s base_url=%s",
+    LLM_BACKEND,
+    LLM_MODEL,
+    LLM_BASE_URL,
+)
+
+# create a single client for reuse
+client = AsyncClient(host=LLM_BASE_URL) if LLM_BACKEND == "ollama" else None
+_http_session: Optional[aiohttp.ClientSession] = None
+
+
+async def _get_http_session() -> aiohttp.ClientSession:
+    """Lazily create the shared session for the OpenAI-compatible path."""
+    global _http_session
+    if _http_session is None or _http_session.closed:
+        _http_session = aiohttp.ClientSession(
+            timeout=aiohttp.ClientTimeout(total=MODEL_CALL_TIMEOUT)
+        )
+    return _http_session
+
+
+@app.get("/health")
+async def health():
+    return {
+        "status": "ok",
+        "backend": LLM_BACKEND,
+        "model": LLM_MODEL,
+        "base_url": LLM_BASE_URL,
+    }
 
 
 @app.on_event("shutdown")
 async def _shutdown():
-    try:
-        await client.aclose()
-    except Exception:
-        pass
+    if client is not None:
+        try:
+            await client.aclose()
+        except Exception:
+            pass
+    if _http_session is not None and not _http_session.closed:
+        await _http_session.close()
 
 
 async def _sha256_hex(b: bytes) -> str:
@@ -258,11 +304,64 @@ async def _extract_image_bytes(
     )
 
 
+async def _call_ollama(image_bytes: bytes):
+    """Ollama native API: images ride alongside the message as raw bytes."""
+    messages = [{"role": "user", "content": LLM_PROMPT, "images": [image_bytes]}]
+    try:
+        return await asyncio.wait_for(
+            client.chat(model=LLM_MODEL, messages=messages, stream=False),
+            timeout=MODEL_CALL_TIMEOUT,
+        )
+    except AttributeError:
+        # client has no chat() API — fall back to generate()
+        return await asyncio.wait_for(
+            client.generate(model=LLM_MODEL, messages=messages, stream=False),
+            timeout=MODEL_CALL_TIMEOUT,
+        )
+
+
+async def _call_openai_compatible(image_bytes: bytes, content_type: str):
+    """OpenAI /v1/chat/completions, as served by vLLM (and by Ollama's /v1 shim).
+
+    Vision models take the image as a base64 ``data:`` URL in the message content.
+    """
+    mime = content_type if content_type.startswith("image/") else "image/jpeg"
+    data_url = f"data:{mime};base64,{base64.b64encode(image_bytes).decode('ascii')}"
+    payload = {
+        "model": LLM_MODEL,
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": LLM_PROMPT},
+                    {"type": "image_url", "image_url": {"url": data_url}},
+                ],
+            }
+        ],
+        "stream": False,
+    }
+    headers = {"Content-Type": "application/json"}
+    api_key = os.getenv("LLM_API_KEY")
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    session = await _get_http_session()
+    url = f"{LLM_BASE_URL}/v1/chat/completions"
+    async with session.post(url, json=payload, headers=headers) as resp:
+        body = await resp.text()
+        if resp.status >= 400:
+            raise HTTPException(
+                status_code=502,
+                detail=f"{url} returned {resp.status}: {body[:500]}",
+            )
+        return json.loads(body)
+
+
 @app.post("/inference")
 async def inference(request: Request, file: Optional[UploadFile] = File(None)):
     """
-    Accepts multipart, raw binary, or JSON+base64 images.
-    Tries to call client.chat, falls back to client.generate, and tries base64 if bytes fail.
+    Accepts multipart, raw binary, or JSON+base64 images and forwards them to the
+    engine selected by LLM_BACKEND ("ollama" or "openai").
     """
     image_bytes, content_type = await _extract_image_bytes(request, file)
 
@@ -270,63 +369,37 @@ async def inference(request: Request, file: Optional[UploadFile] = File(None)):
     if len(image_bytes) > MAX_IMAGE_SIZE:
         raise HTTPException(status_code=413, detail="Image too large")
 
-    # debug: save a local copy (optional)
     sha = await _sha256_hex(image_bytes)
-    tmp_path = f"/tmp/llm_in_{sha[:8]}.bin"
-    try:
-        with open(tmp_path, "wb") as wf:
-            wf.write(image_bytes)
-        logging.info(
-            "Saved incoming bytes to %s size=%d ct=%s",
-            tmp_path,
-            len(image_bytes),
-            content_type,
-        )
-    except Exception as e:
-        logging.debug("Failed to write debug file: %s", e)
-
-    # 2) prepare a user message with image
-    prompt = "What is in the image?"
-    messages_bytes = [{"role": "user", "content": prompt, "images": [image_bytes]}]
-
-    async def try_model_call(messages):
-        """Try chat then generate with provided messages (caller supplies images as bytes or base64)."""
-        # Prefer chat if available
+    if SAVE_DEBUG_IMAGE:
+        tmp_path = f"/tmp/llm_in_{sha[:8]}.bin"
         try:
-            return await asyncio.wait_for(
-                client.chat(model=LLM_MODEL, messages=messages, stream=False),
-                timeout=MODEL_CALL_TIMEOUT,
+            with open(tmp_path, "wb") as wf:
+                wf.write(image_bytes)
+            logging.info(
+                "Saved incoming bytes to %s size=%d ct=%s",
+                tmp_path,
+                len(image_bytes),
+                content_type,
             )
-        except AttributeError:
-            # client has no chat() API — fall back to generate()
-            return await asyncio.wait_for(
-                client.generate(model=LLM_MODEL, messages=messages, stream=False),
-                timeout=MODEL_CALL_TIMEOUT,
-            )
+        except Exception as e:
+            logging.debug("Failed to write debug file: %s", e)
 
-    # 3) call model (try with raw bytes first; on failure try base64)
-    response = None
-    model_errors = []
+    # 2) call the configured engine
     try:
-        response = await try_model_call(messages_bytes)
-    except Exception as e:
-        logging.info(
-            "Model call with raw bytes failed, will try base64 fallback: %s", e
+        if LLM_BACKEND == "ollama":
+            response = await _call_ollama(image_bytes)
+        else:
+            response = await _call_openai_compatible(image_bytes, content_type)
+    except HTTPException:
+        raise
+    except asyncio.TimeoutError:
+        raise HTTPException(
+            status_code=504,
+            detail=f"{LLM_BACKEND} call timed out after {MODEL_CALL_TIMEOUT}s",
         )
-        model_errors.append(("bytes", e))
-
-        # # try base64-encoding the image (some client versions/platforms require base64)
-        # try:
-        #     b64 = base64.b64encode(image_bytes).decode("ascii")
-        #     messages_b64 = [{"role": "user", "content": prompt, "images": [b64]}]
-        #     response = await try_model_call(messages_b64)
-        # except Exception as e2:
-        #     logging.exception("Model base64 fallback also failed")
-        #     model_errors.append(("base64", e2))
-        #     # nothing else to try
-        #     raise HTTPException(
-        #         status_code=500, detail=f"Model call failed: {model_errors}"
-        #     )
+    except Exception as e:
+        logging.exception("Model call failed")
+        raise HTTPException(status_code=502, detail=f"{LLM_BACKEND} call failed: {e}")
 
     # 4) robustly extract text from response (your existing logic)
     content = None
@@ -366,7 +439,12 @@ async def inference(request: Request, file: Optional[UploadFile] = File(None)):
     except Exception:
         content = str(response)
 
-    return {"response": content, "sha256": sha}
+    return {
+        "response": content,
+        "model": LLM_MODEL,
+        "backend": LLM_BACKEND,
+        "sha256": sha,
+    }
 
 
 if os.environ.get("MANUAL_TRACING"):
