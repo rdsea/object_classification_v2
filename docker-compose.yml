@@ -1,5 +1,3 @@
-version: "3.8"
-
 x-inference-build: &inference-build
   context: .
   dockerfile: src/inference/Dockerfile.cpu
@@ -12,7 +10,7 @@ services:
       dockerfile: src/preprocessing/Dockerfile
     restart: unless-stopped
     ports:
-      - 5010:5010
+      - "${PREPROCESSING_PORT:-5010}:5010"
     environment:
       DOCKER: "true"
       LOG_LEVEL: "WARNING"
@@ -29,10 +27,20 @@ services:
     restart: unless-stopped
     environment:
       DOCKER: "true"
-      LOG_LEVEL: "WARNING"
+      # INFO so the resolved backend list is logged at startup -- that line is how
+      # you confirm an INFERENCE_BACKENDS edit actually took effect. LOG_LEVEL=DEBUG
+      # additionally logs the full per-backend result payload.
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
       MANUAL_TRACING: "true"
       OTEL_ENDPOINT: "http://otel-collector:4317"
       SEND_TO_QUEUE: "false"
+      # Ensemble members as name=kind=url. Edit here to add/remove/repoint a
+      # backend without rebuilding. kind is "cnn" (raw RGB buffer) or "llm"
+      # (JPEG-encoded). Omit to fall back to src/ensemble/ensemble_service.yaml.
+      INFERENCE_BACKENDS: >-
+        mobilenetv2=cnn=http://mobilenetv2:5012/inference,
+        efficientnetb0=cnn=http://efficientnetb0:5012/inference,
+        llava=llm=http://llava-service:5012/inference
       RABBITMQ_URL: "gateway.cloud-1.svc:30072"
       RABBITMQ_QUEUE_NAME: "object_detection_result"
       RABBITMQ_USERNAME: "admin"
@@ -61,6 +69,27 @@ services:
       LOG_LEVEL: "WARNING"
       MANUAL_TRACING: "true"
       OTEL_ENDPOINT: "http://otel-collector:4317"
+    depends_on:
+      - otel-collector
+
+  # Adapter exposing an Ollama/vLLM model on the same /inference contract as the
+  # CNN services. Talks to an Ollama on the host by default; overlay
+  # deployment/llm/docker-compose.ollama.yaml to run the engine in a container.
+  llava-service:
+    image: rdsea/llm_service
+    build:
+      context: .
+      dockerfile: src/llm_service/Dockerfile
+    restart: unless-stopped
+    environment:
+      LLM_BACKEND: "ollama"
+      LLM_BASE_URL: "http://host.docker.internal:11434"
+      LLM_MODEL: "llava:7b"
+      LOG_LEVEL: "INFO"
+      MANUAL_TRACING: "true"
+      OTEL_ENDPOINT: "http://otel-collector:4317"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - otel-collector
 
