@@ -1,0 +1,64 @@
+# llama.cpp engine overlay — the lightest CPU option.
+#
+#   docker compose -f docker-compose.yml -f deployment/llm/docker-compose.llamacpp.yaml up
+#
+# llama-server exposes an OpenAI-compatible /v1/chat/completions, so the adapter
+# drives it through the same LLM_BACKEND=openai path as vLLM — no code change.
+#
+# LLAMACPP_MODEL is a HuggingFace GGUF repo. `-hf` downloads the weights and,
+# for vision models, the matching mmproj projector automatically:
+#   ggml-org/SmolVLM-500M-Instruct-GGUF   ~0.5 GB, loads in ~60s on CPU (default)
+#   ggml-org/SmolVLM2-2.2B-Instruct-GGUF  better quality, still CPU-friendly
+#   ggml-org/llava-1.5-7b-GGUF            comparable to the Ollama llava:7b default
+#
+# Unlike the Ollama overlay there is no separate pull step: llama-server fetches
+# the model on first start, which is why the healthcheck allows a long start_period.
+
+services:
+  llamacpp:
+    image: ghcr.io/ggml-org/llama.cpp:server${LLAMACPP_TAG_SUFFIX:-}
+    restart: unless-stopped
+    volumes:
+      # Named volume so the GGUF is downloaded once, not on every recreate.
+      - llamacpp-models:/root/.cache/llama.cpp
+    ports:
+      - "${LLAMACPP_PORT:-8080}:8080"
+    command:
+      - -hf
+      - ${LLAMACPP_MODEL:-ggml-org/SmolVLM-500M-Instruct-GGUF}
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8080"
+      # Context per slot; raise for longer prompts, lower to save RAM.
+      - --ctx-size
+      - "${LLAMACPP_CTX_SIZE:-4096}"
+      # Threads for CPU inference. Defaults to the container's core count.
+      - --threads
+      - "${LLAMACPP_THREADS:-4}"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 60
+      # First start downloads the GGUF; a 7B model over a slow link needs this.
+      start_period: 600s
+
+  # Same adapter, pointed at llama.cpp's OpenAI-compatible API.
+  llava-service:
+    depends_on:
+      llamacpp:
+        condition: service_healthy
+    environment:
+      LLM_BACKEND: "openai"
+      LLM_BASE_URL: "http://llamacpp:8080"
+      # llama-server serves whatever -hf loaded regardless of this value, but the
+      # adapter sends it and it shows up in the response, so keep it meaningful.
+      LLM_MODEL: "${LLM_MODEL:-llamacpp}"
+      MODEL_CALL_TIMEOUT: "${MODEL_CALL_TIMEOUT:-120}"
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      MANUAL_TRACING: "true"
+      OTEL_ENDPOINT: "${OTEL_ENDPOINT:-http://otel-collector:4317}"
+
+volumes:
+  llamacpp-models:

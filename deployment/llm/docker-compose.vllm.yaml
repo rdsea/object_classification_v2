@@ -2,7 +2,7 @@
 # model — vLLM will not start on a CPU-only host. On edge / laptop hardware use
 # docker-compose.ollama.yaml instead.
 #
-#   docker compose -f src/docker-compose.yml -f deployment/llm/docker-compose.vllm.yaml up
+#   docker compose -f docker-compose.yml -f deployment/llm/docker-compose.vllm.yaml up
 #
 # Prerequisite: nvidia-container-toolkit installed, so `docker run --gpus all` works.
 #
@@ -62,8 +62,9 @@ services:
       # Must match --served-model-name above.
       LLM_MODEL: "${LLM_MODEL:-llava}"
       MODEL_CALL_TIMEOUT: "${MODEL_CALL_TIMEOUT:-120}"
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
       MANUAL_TRACING: "true"
-      OTEL_ENDPOINT: "${OTEL_ENDPOINT:-http://jaeger:4318/v1/traces}"
+      OTEL_ENDPOINT: "${OTEL_ENDPOINT:-http://otel-collector:4317}"
 
 volumes:
   vllm-cache:

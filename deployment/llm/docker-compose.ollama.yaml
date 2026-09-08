@@ -1,7 +1,7 @@
 # Containerized Ollama engine + the model-pull step, replacing the previous
 # "Ollama runs on the host, reach it via host.docker.internal" arrangement.
 #
-#   docker compose -f src/docker-compose.yml -f deployment/llm/docker-compose.ollama.yaml up
+#   docker compose -f docker-compose.yml -f deployment/llm/docker-compose.ollama.yaml up
 #
 # Change the served model without rebuilding anything:
 #   LLM_MODEL=qwen2.5vl:3b docker compose ... up
@@ -51,7 +51,7 @@ services:
     restart: "no"
 
   # The adapter that speaks the ensemble's /inference contract.
-  # Overrides the llava-service defined in src/docker-compose.yml so it points at
+  # Overrides the llava-service defined in docker-compose.yml so it points at
   # the containerized engine instead of the host.
   llava-service:
     depends_on:
@@ -62,8 +62,9 @@ services:
       LLM_BASE_URL: "http://ollama:11434"
       LLM_MODEL: "${LLM_MODEL:-llava:7b}"
       MODEL_CALL_TIMEOUT: "${MODEL_CALL_TIMEOUT:-120}"
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
       MANUAL_TRACING: "true"
-      OTEL_ENDPOINT: "${OTEL_ENDPOINT:-http://jaeger:4318/v1/traces}"
+      OTEL_ENDPOINT: "${OTEL_ENDPOINT:-http://otel-collector:4317}"
 
 volumes:
   ollama-models:
