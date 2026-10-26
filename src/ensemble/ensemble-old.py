@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pandas
+
 import asyncio
 import json
 import logging
